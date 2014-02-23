@@ -1,0 +1,38 @@
+html, body{
+	margin:0;
+	padding:0;
+}
+
+body{
+	height:1000px;
+}
+
+.infometer{
+	position:fixed;
+	height:20px;
+	width:100%;
+	background:blue;
+	top:0;
+}
+
+.progress{
+	display:block;
+	background:green;
+	height:20px;
+}
+
+.marker1{
+	position:absolute;
+	top:60px;
+	height:5px;
+	background:red;
+	width:50px;
+}
+
+.marker2{
+	position:absolute;
+	top:500px;
+	height:5px;
+	background:aqua;
+	width:50px;
+}
