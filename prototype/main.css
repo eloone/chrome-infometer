@@ -35,6 +35,7 @@ body{
 .marker{
 	cursor:pointer;
 	position:absolute;
+	left:0;
 }
 
 .marker1{	
