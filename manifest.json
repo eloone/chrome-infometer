@@ -1,14 +1,31 @@
 {
-  "name": "test",
-  "description": "test",
+  "name": "Chrome Infometer",
+  "description": "Extension",
   "version": "2.0",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "background": {
     "scripts": ["background.js"],
     "persistent": false
   },
+  "content_scripts" : [
+  {
+	  	"matches" : ["http://*/*","https://*/*"],
+	  	"css": ["prototype/main.css"],	  	
+	  	"js" : [
+	  			"jquery.js",
+	  			"main.js"
+	  			]
+	  	
+  	}
+  ],
+  "web_accessible_resources" : [
+  	"prototype/marker.svg",
+  	"prototype/marker.png",
+  	"prototype/markerdashed.svg"
+  ],
   "browser_action": {
     "default_title": "test"
   },
