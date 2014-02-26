@@ -1,14 +1,13 @@
 //Called when content script sends message
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if (request.method == "getStorage"){
-      chrome.storage.sync.get(request.key, function(result){
-    	  sendResponse({data: result});
-      });
-      
-      return true;
+    	 chrome.storage.sync.get(request.key, function(result){
+    		 sendResponse({data: result});   		
+         });    	        
     }
+    
+    return true;
 });
-
 
 // Called when the user clicks on the browser action.
 chrome.browserAction.onClicked.addListener(function(tab) {
@@ -18,7 +17,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
  chrome.storage.sync.get(page_url, init);
 
  function init(saved){
- 	var settings = saved[page_url] || {}
+ 	var settings = saved[page_url] || {},
  		save = {};
 	 console.log(settings);
 	 if(!isEmpty(settings)){
@@ -37,17 +36,11 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 
 	 save[page_url] = settings;
 	 
-	 chrome.storage.sync.set(save);
-	
-	 if(settings.enabled === true){
+	 chrome.storage.sync.set(save, function(){
 		 chrome.tabs.executeScript({
-			 file: 'enable.js'
+			 file: 'init.js'
 		 });
-	 }else{
-		 chrome.tabs.executeScript({
-			 file: 'disable.js'
-		 });
-	 }
+	 });
  }
  
  function isEmpty(obj){
