@@ -1,25 +1,42 @@
-function enableExtension(){
+$(document).ready(function(){
+	enableExtension();
+});
+
+function enableExtension(){	
 	
-	var viewportHeight = $(window).height();
-	var m1 = new Marker($('<img src="" class="marker marker1"/>'));
-	var m2 = new Marker($('<img src="" class="marker marker2"/>'));
-	var heightToView = getHeightToView(m1, m2);
-	var header = new Header($('<div class="infometer"><span class="progress"></span></div>'));
 	var pageUrl = window.location.href.replace(/([^#]*)#.*/, '$1');
-	console.log(pageUrl);
-	
-	//var settings = chrome.storage.sync.get(pageUrl, init) || {};
-	
-	chrome.runtime.sendMessage({method: "getStorage", key : pageUrl}, function(response) {
-		console.log(response);
-	});
+
+	chrome.runtime.sendMessage({method: "getStorage", key : pageUrl}, init);
 	
 	function init(settings){
-		console.log(settings);
+
+		var save = {};
+
+		if('data' in settings){
+			settings = settings.data[pageUrl];
+		}else{
+			return;
+		}
+
+		if(settings.enabled === false){
+			return;
+		}
+
+		/* * * * * start * * * */
+		var viewportHeight = $(window).height();
+		var m1 = new Marker($('<img src="" class="chrome-extension-infometer marker marker1"/>'));
+		var m2 = new Marker($('<img src="" class="chrome-extension-infometer marker marker2"/>'));
+		var heightToView = getHeightToView(m1, m2);
+		var header = new Header($('<div class="chrome-extension-infometer infometer"><span class="chrome-extension-infometer progress"></span></div>'));
+
+		$(document).off('markerMoved');
+
 		if(settings.m1Top){
+			console.log('move m1');
+			console.log(settings.m1Top);
 			m1.moveTo(settings.m1Top);
 		}
-		
+		console.log(settings);
 		if(settings.m2Top){
 			m2.moveTo(settings.m2Top);
 		}	
@@ -40,38 +57,49 @@ function enableExtension(){
 			m2.updatePosition(e.pageY);
 		});
 		
-		$(document).on('markerMoved', function(e){
-			
+		$(document).on('markerMoved', onMarkerMoved);
+
+		function onMarkerMoved(e){
+		console.log('markerMoved');	
 			if(m1.top() > m2.top()){
 				var tmp = m2;
 				m2 = m1;
 				m1 = tmp;
 			}
-			
+
+			console.log('m1.node.offset().top');
+			console.log(m1.node.offset().top);
+
 			settings.m1Top = m1.top();
 			settings.m2Top = m2.top();
-			
-			chrome.storage.sync.set({pageUrl : settings});
+			console.log('m1.top()');
+console.log(m1.top());
+console.log('m1');
+console.log(m1);
+			save[pageUrl] = settings;
+			console.log(save);
+			chrome.storage.sync.set(save);
 			
 			heightToView = getHeightToView(m1, m2);
 	
 			calculateProgress();
-		});
-	}
-	
-	function calculateProgress(){
-		if(m1.positioned == 'final' && m2.positioned == 'final'){
-			var viewedHeight = viewportHeight - m1.screenTop() - Math.max(0, viewportHeight - m2.screenTop()) ;
+		}
 
-			var progress = (viewedHeight/heightToView)*100;
-		
-			$('.progress').css('width', progress+'%');
+		function calculateProgress(){
+			if(m1.positioned == 'final' && m2.positioned == 'final'){
+				var viewedHeight = viewportHeight - m1.screenTop() - Math.max(0, viewportHeight - m2.screenTop()) ;
+
+				var progress = (viewedHeight/heightToView)*100;
+			
+				$('.progress').css('width', progress+'%');
+			}
 		}
 	}
+	
 }
 
 function disableExtension(){
-	console.log('OK !!!');
+	$('.chrome-extension-infometer').remove();
 }
 
 function Header(jqueryNode){
@@ -97,10 +125,8 @@ function Marker(jqueryNode){
 		if($this.positioned == 'final'){
 			$('body').css('cursor', 'url('+$this.src+'), auto');
 
-			if(supportsSVG()){
-				$this.node.get(0).src = $this.srcDashed;
-			}
-
+			$this.node.get(0).src = $this.srcDashed;
+			
 			tooltip = $('<p class="tooltip">Please click on the end position you wish for this marker.</p>');
 	
 			$('body').append(tooltip);
@@ -118,12 +144,17 @@ function Marker(jqueryNode){
 	
 	$('body').append(this.node);
 
+	/*this.top = function(){
+		console.log('$(this.node).length');
+		console.log($(this.node).length);
+		return $(this.node).offset().top + this.fixedHeight()/2;
+	};*/
 }
 
 Marker.prototype = {
 	eventMoved : new Event("markerMoved"),
 	top : function(){
-		return $(this.node).offset().top + this.fixedHeight()/2;
+		return this.node.offset().top + this.fixedHeight()/2;
 	},
 	screenTop : function(){
 		return this.node.get(0).getBoundingClientRect().top + this.fixedHeight()/2;
@@ -141,6 +172,9 @@ Marker.prototype = {
 			left : 0,
 			top : y
 		});
+
+console.log('in moveto');
+		console.log(this.node.offset().top);
 		
 		document.dispatchEvent(this.eventMoved);
 	},

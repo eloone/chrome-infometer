@@ -13,18 +13,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 // Called when the user clicks on the browser action.
 chrome.browserAction.onClicked.addListener(function(tab) {
  var page_url = tab.url.replace(/([^#]*)#.*/, '$1');
+//chrome.storage.sync.clear();
+//return;
+ chrome.storage.sync.get(page_url, init);
 
- console.log(page_url);
- chrome.storage.sync.set({'t' : 'test'}, function(){
-	 console.log('ok store');
-	 
-	 chrome.storage.sync.get('t', function(f){
-		 console.log(f);
-	 });
- });
-
-
- function init(settings){
+ function init(saved){
+ 	var settings = saved[page_url] || {}
+ 		save = {};
 	 console.log(settings);
 	 if(!isEmpty(settings)){
 		 if(settings.enabled === true){
@@ -39,16 +34,10 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 			m2Top : null
 		 };
 	 }
+
+	 save[page_url] = settings;
 	 
-	 chrome.storage.sync.set({page_url : settings}, function(){
-		 chrome.storage.sync.get(page_url, function(f){
-				console.log(f);
-			});
-	 });
-	 console.log(page_url);
-	console.log(settings);
-	
-	
+	 chrome.storage.sync.set(save);
 	
 	 if(settings.enabled === true){
 		 chrome.tabs.executeScript({
