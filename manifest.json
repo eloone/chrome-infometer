@@ -16,9 +16,9 @@
 	  	"css": ["prototype/main.css"],	  	
 	  	"js" : [
 	  			"jquery.js",
-	  			"main.js"
-	  			]
-	  	
+	  			"main.js",
+	  			"init.js"
+	  			]	  	
   	}
   ],
   "web_accessible_resources" : [
