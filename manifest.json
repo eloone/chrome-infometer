@@ -13,9 +13,8 @@
   "content_scripts" : [
   {
 	  	"matches" : ["http://*/*","https://*/*"],
-	  	"css": ["prototype/main.css"],	  	
+	  	"css": ["main.css"],	  	
 	  	"js" : [
-	  			"jquery.js",
 	  			"main.js",
 	  			"init.js"
 	  			]	  	
@@ -27,7 +26,7 @@
   	"prototype/markerdashed.svg"
   ],
   "browser_action": {
-    "default_title": "test"
+    "default_title": "Chrome Infometer"
   },
   "manifest_version": 2
 }
