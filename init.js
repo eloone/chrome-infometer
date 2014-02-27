@@ -1,5 +1,9 @@
-$(document).ready(function(){
-	console.log('init');
-	var ext = new Extension();
-		//ext.init();
+//reset if click on extension icon
+if(typeof(chromeInfometer) != 'undefined' && chromeInfometer instanceof Extension){
+	chromeInfometer = new Extension();
+};
+
+window.addEventListener('load', function(){
+	chromeInfometer = new Extension();
 });
+
