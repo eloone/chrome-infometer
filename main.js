@@ -14,9 +14,11 @@ function Extension(){
 			if(typeof(settings.data[_extension.pageUrl]) !== 'undefined'){
 				_extension.settings = settings.data[_extension.pageUrl];
 			}else{
+				chrome.runtime.sendMessage({method: "setDisabled"});
 				return;
 			}
 		}else{
+			chrome.runtime.sendMessage({method: "setDisabled"});
 			return;
 		}
 
@@ -29,36 +31,42 @@ function Extension(){
 	
 	this.enable = function(){
 		_extension.viewportHeight = window.innerHeight;
-		_extension.m1 = new Marker(['marker1']);
-		_extension.m2 = new Marker(['marker2']);
-		//_extension.heightToView = _extension.getHeightToView();
-		_extension.header = new Header($('<div class="chrome-extension-infometer infometer"><span class="chrome-extension-infometer progress"></span></div>'));
+		_extension.m1 = new Marker(['chrome-extension-infometer-marker1']);
+		_extension.m2 = new Marker(['chrome-extension-infometer-marker2']);
+		_extension.header = new Header();
 		
 		this.attachEvents();
-		
-		if(_extension.settings.m1Top){
+
+		if(_extension.settings.m1Top !== null){
 			_extension.m1.moveTo(_extension.settings.m1Top);
 		}else{
 			_extension.m1.moveTo(60);
 		}
 
-		if(_extension.settings.m2Top){
-			
+		if(_extension.settings.m2Top !== null){			
 			_extension.m2.moveTo(_extension.settings.m2Top);
-			console.log('m2 moved '+_extension.settings.m2Top);
 		}else{
-			_extension.m1.moveTo(200);
-			console.log('m2 moved '+200);
-		}	
+			_extension.m2.moveTo(200);
+		}
 		
 		_extension.calculateProgress();
+		
+		chrome.runtime.sendMessage({method: "setEnabled"});
 		
 	};
 	
 	this.disable = function(){
-		$('.chrome-extension-infometer').remove();
+		var extensionElts = document.querySelectorAll('.chrome-extension-infometer');
+		
+		for(var i=0;i < extensionElts.length; i++){
+			document.body.removeChild(extensionElts[i]);
+		}
+		
+		document.body.className = document.body.className.replace(/chrome-extension-infometer-body/g, '');
 		
 		this.detachEvents();
+		
+		chrome.runtime.sendMessage({method: "setDisabled"});
 	};
 	
 	this.attachEvents = function(){
@@ -68,7 +76,9 @@ function Extension(){
 	
 		document.addEventListener('click', _extension.onDocumentClick);
 		
-		document.addEventListener('markerMoved',  _extension.onMarkerMoved);		
+		document.addEventListener('markerMoved',  _extension.onMarkerMoved);
+		
+		document.addEventListener('markerClicked',  _extension.onMarkerClicked);
 	};
 	
 	this.detachEvents = function(){
@@ -79,34 +89,26 @@ function Extension(){
 		document.removeEventListener('click', _extension.onDocumentClick);
 		
 		document.removeEventListener('markerMoved', _extension.onMarkerMoved);
+		
+		document.removeEventListener('markerClicked',  _extension.onMarkerClicked);
 	};
 	
 	this.calculateProgress = function(){
 		if(_extension.m1.positioned == 'final' && _extension.m2.positioned == 'final'){
 			var viewedHeight = _extension.viewportHeight - _extension.m1.screenTop() - Math.max(0, _extension.viewportHeight - _extension.m2.screenTop()) ;
 
-			var progress = (viewedHeight/_extension.heightToView)*100;
-			/*console.log('viewedHeight');
-			console.log(viewedHeight);
-			console.log('_extension.heightToView');
-			console.log(_extension.heightToView);
-*/
-			$('.progress').css('width', progress+'%');
+			var progress = Math.max((viewedHeight/_extension.heightToView)*100, 0);
+
+			this.header.progressBar.style.width = progress+'%';
 		}
 	};
 	
 	this.getHeightToView = function(){
-		/*console.log('_extension.m2.top()');
-		console.log(_extension.m2.top());
-		console.log('_extension.m1.top()');
-		console.log(_extension.m1.top());
-		console.log($(_extension.m2.node).offset());*/
 		return Math.abs(_extension.m2.top() - _extension.m1.top());
 	};
 	
 	/* * * * events handlers * * * */
 	this.onWindowScroll = function(){
-		console.log('scroll');
 		_extension.calculateProgress();	
 	};
 	
@@ -121,8 +123,9 @@ function Extension(){
 	};
 	
 	this.onMarkerMoved = function(){
-		console.log('marker moved');
 		var save = {};
+		
+		_extension.header.removeTooltip();
 		
 		if(_extension.m1.top() > _extension.m2.top()){
 			var tmp = _extension.m2;
@@ -134,54 +137,75 @@ function Extension(){
 		_extension.settings.m2Top = _extension.m2.positioned == 'final' ? _extension.m2.top() : _extension.settings.m2Top;
 
 		save[_extension.pageUrl] = _extension.settings;
-		console.log('save');
-console.log(save);
+
 		chrome.storage.sync.set(save);
 		
 		_extension.heightToView = _extension.getHeightToView();
-console.log('_extension.heightToView');
-console.log(_extension.heightToView);
+
 		_extension.calculateProgress();
+	};
+	
+	this.onMarkerClicked = function(){
+		_extension.header.addTooltip();
 	};
 }
 
-function Header(jqueryNode){
-	this.node = jqueryNode;
-
-	$('body').append(this.node);
-
+function Header(){
+	var progress = document.createElement('span'),
+		header = document.createElement('div'),
+		tooltip = document.createElement('p');
+	
+	progress.className = 'chrome-extension-infometer-progress';
+	header.className = 'chrome-extension-infometer chrome-extension-infometer-header';
+	tooltip.className = 'chrome-extension-infometer-tooltip';
+	
+	tooltip.innerHTML = 'Please click on the end position you wish for this marker.';
+	header.appendChild(progress);
+	
+	this.node = header;
+	this.progressBar = progress;
+	
+	this.addTooltip = function(){
+		if(tooltip.parentNode === null){
+			this.node.appendChild(tooltip);
+		}
+	};
+	
+	this.removeTooltip = function(){
+		if(tooltip.parentNode === this.node){
+			this.node.removeChild(tooltip);
+		}
+	};
+	
+	document.body.className += ' chrome-extension-infometer-body';
+	document.body.insertBefore(header, document.body.firstChild);
 }
 
 function Marker(classes){
 	var classes = classes || [];
 	var markerSvg = chrome.extension.getURL("prototype/marker.svg");
 	var markerDashed = chrome.extension.getURL("prototype/markerdashed.svg");
-	var markerSrc = markerSvg;
 	
 	var $this = this;
 	
 	this.node = document.createElement('img');
 	
-	this.node.className = "chrome-extension-infometer marker "+ classes.join(' ');
+	this.node.className = "chrome-extension-infometer chrome-extension-infometer-marker "+ classes.join(' ');
 
-	this.src = markerSrc;
+	this.src = markerSvg;
 	
 	this.srcDashed = markerDashed;
 	
 	this.node.addEventListener('click', function(e){
+		
 		if($this.positioned == 'final'){
-			$('body').css('cursor', 'url('+$this.src+'), auto');
-
+			document.dispatchEvent($this.eventMarkerClicked);
+			
+			document.body.style.cursor = 'url('+$this.src+'), auto';
+			
 			$this.node.src = $this.srcDashed;
 			
-			tooltip = $('<p class="tooltip">Please click on the end position you wish for this marker.</p>');
-	
-			$('body').append(tooltip);
-			
 			$this.positioned = 'pending';
-			
-			$this.tooltip = tooltip;
-
 		}
 
 		e.stopPropagation();
@@ -193,10 +217,9 @@ function Marker(classes){
 }
 
 Marker.prototype = {
-	eventMoved : new Event("markerMoved"),
+	eventMoved : new Event('markerMoved'),
+	eventMarkerClicked : new Event('markerClicked'),
 	top : function(){
-		console.log('in top()');
-		console.log(this.node.offsetTop);
 		return this.node.offsetTop + this.fixedHeight()/2;
 	},
 	screenTop : function(){
@@ -209,13 +232,9 @@ Marker.prototype = {
 		return this.node.offsetWidth;
 	},
 	positioned : 'pending',
-	moveTo : function(y){
-		console.log('in moveTo');
-		console.log(this.node.offsetTop);		
+	moveTo : function(y){		
 		this.node.style.left = 0 + 'px';
 		this.node.style.top = y + 'px';
-		console.log('in moveTo2');
-		console.log(this.node.offsetTop);
 		
 		this.positioned = 'final';
 		
@@ -233,12 +252,8 @@ Marker.prototype = {
 			this.moveTo(y);
 
 			this.node.src = this.src;
-			
-			this.positioned = 'final';
-			
-			this.tooltip.remove();
 
-			$('body').css('cursor', 'default');
+			document.body.style.cursor = 'default';
 		}	
 	}			
 };
