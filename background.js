@@ -1,12 +1,25 @@
 //Called when content script sends message
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.method == "getStorage"){
+    if (request.method == 'getStorage'){
     	 chrome.storage.sync.get(request.key, function(result){
     		 sendResponse({data: result});   		
-         });    	        
+         });  
+    	 
+    	 return true;
     }
     
-    return true;
+    if(request.method == 'setEnabled'){
+    	 chrome.browserAction.setBadgeText({text : 'ON'});
+		 chrome.browserAction.setBadgeBackgroundColor({color : '#fec603'});
+		 chrome.browserAction.setTitle({title : 'Chrome Infometer is active'});
+    }
+    
+    if(request.method == 'setDisabled'){
+    	chrome.browserAction.setBadgeText({text : 'OFF'});
+		chrome.browserAction.setBadgeBackgroundColor({color : [140,140,140,255]});
+		chrome.browserAction.setTitle({title : 'Chrome Infometer is inactive'});
+    }
+    
 });
 
 // Called when the user clicks on the browser action.
@@ -42,7 +55,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 		 });
 	 });
  }
- 
+
  function isEmpty(obj){
 	 for (var key in obj) {
 	    if (hasOwnProperty.call(obj, key)) return false;
