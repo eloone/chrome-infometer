@@ -9,17 +9,24 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
     
     if(request.method == 'setEnabled'){
-    	 chrome.browserAction.setBadgeText({text : 'ON'});
-		 chrome.browserAction.setBadgeBackgroundColor({color : '#fec603'});
-		 chrome.browserAction.setTitle({title : 'Chrome Infometer is active'});
+    	setExtensionActive();
     }
     
     if(request.method == 'setDisabled'){
-    	chrome.browserAction.setBadgeText({text : 'OFF'});
-		chrome.browserAction.setBadgeBackgroundColor({color : [140,140,140,255]});
-		chrome.browserAction.setTitle({title : 'Chrome Infometer is inactive'});
+    	setExtensionInactive();
     }
     
+});
+
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
+	console.log(tab.url);
+});
+
+chrome.tabs.onActivated.addListener(function(activeInfo){
+	chrome.tabs.get(activeInfo.tabId, function(tab){
+		console.log(tab.url);
+		checkExtensionStatus(tab.url);
+	});
 });
 
 // Called when the user clicks on the browser action.
@@ -54,14 +61,39 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 			 file: 'init.js'
 		 });
 	 });
- }
+ }  
+});
 
- function isEmpty(obj){
+function checkExtensionStatus(tabUrl){
+	 if(typeof(tabUrl) != 'string'){
+		 return;
+	 }	 
+	 
+	 var url = tabUrl.replace(/([^#]*)#.*/, '$1');
+
+	 chrome.storage.sync.get(url, function(settings){
+		 if(isEmpty(settings) || (typeof(settings.enabled) != 'undefined' && settings.enabled === false)){
+			 setExtensionInactive();
+		 }
+    }); 
+}
+
+function setExtensionActive(){
+	 chrome.browserAction.setBadgeText({text : 'ON'});
+	 chrome.browserAction.setBadgeBackgroundColor({color : '#fec603'});
+	 chrome.browserAction.setTitle({title : 'Chrome Infometer is active'});
+}
+
+function setExtensionInactive(){
+	 chrome.browserAction.setBadgeText({text : 'OFF'});
+	 chrome.browserAction.setBadgeBackgroundColor({color : [140,140,140,255]});
+	 chrome.browserAction.setTitle({title : 'Chrome Infometer is inactive'});
+}
+
+function isEmpty(obj){
 	 for (var key in obj) {
 	    if (hasOwnProperty.call(obj, key)) return false;
 	 }
 	 
 	 return true;
- }
-  
-});
+}
