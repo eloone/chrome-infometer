@@ -42,6 +42,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 			if(getCurrentExtension()){
 				chromeInfometer.update(request.settings);
 				console.log('updateStatus');
+				console.log(request.from);
 				//sendResponse({data : 'extension is updated'});
 				port.postMessage({data : 'extension is updated'});
 			}else{
@@ -58,6 +59,8 @@ chrome.runtime.onConnect.addListener(function(port) {
 
 });
 });
+
+
 
 
 
@@ -82,6 +85,7 @@ function Extension(){
 		chrome.runtime.sendMessage({method: "getStorage", key : pageUrl}, function(res){
 			/*var settings = null;
 */
+			console.log(res);
 			if(res && 'data' in res){
 				_extension.update(res.data);
 			}
@@ -95,7 +99,6 @@ function Extension(){
 	this.update = function(settings){
 		console.log('settings before update');
 		console.log(settings);
-
 		/*if(equals(_extension.settings, settings)){
 			//no change of settings do nothing
 			console.log('no change in extension settings');
@@ -127,6 +130,7 @@ function Extension(){
 		}else{
 			this.disable();
 		}
+		
 	};
 	
 	this.enable = function(){
