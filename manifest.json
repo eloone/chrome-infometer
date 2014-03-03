@@ -1,11 +1,14 @@
 {
-  "name": "Chrome Infometer",
-  "description": "Extension",
+  "name": "Infometer",
+  "description": "Infometer helps you measure how much you have read of an online content.",
   "version": "2.0",
   "permissions": [
     "activeTab",
     "storage",
-    "tabs"
+    "tabs",
+    "management",
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -14,20 +17,19 @@
   "content_scripts" : [
   {
 	  	"matches" : ["http://*/*","https://*/*"],
-	  	"css": ["main.css"],	  	
+	  	"css": ["client.css"],	  	
 	  	"js" : [
-	  			"main.js",
-	  			"init.js"
-	  			]	  	
+	  			"client.js"
+	  			],
+      "run_at" : "document_start" 	
   	}
   ],
   "web_accessible_resources" : [
-  	"prototype/marker.svg",
-  	"prototype/marker.png",
-  	"prototype/markerdashed.svg"
+  	"images/marker.svg",
+  	"images/markerdashed.svg"
   ],
   "browser_action": {
-    "default_title": "Chrome Infometer"
+    "default_title": "Infometer"
   },
   "manifest_version": 2
 }
