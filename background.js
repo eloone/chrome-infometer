@@ -1,33 +1,20 @@
-var iconStatus = {};
-
-
 /* * * * chrome events * * * */
 chrome.management.onInstalled.addListener(function(info){
 	console.log('installed');
 	refreshContentScripts();
-	updateIcon();
 });
 
 chrome.management.onEnabled.addListener(function(info){
 	console.log('enabled');
 	refreshContentScripts();
-	updateIcon();
 });
 
 //Called when content script sends message
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+	var urlKey = sender.tab.url.replace(/([^#]*)#.*/, '$1');
 	
     if (request.method == 'getStorage'){
-    	/* chrome.storage.local.get(request.key, function(result){
-    	 	console.log('in getStorage');
-    	 	console.log(result);
-    		 sendResponse({data: result});   		
-         }); */
-
-
-         getStorage(request.key, function(result){
-         	console.log('in getStorage');
-    	 	console.log(result);
+         getStorage(urlKey, function(result){
     		 sendResponse({data: result});  
          });
     	 
@@ -35,118 +22,54 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
 
     if(request.method == 'setEnabled'){
-    	console.log('sender');
-    	console.log(sender);
-    	console.log('message setEnabled');
-    	//setEnabled();
-
-    	iconStatus[sender.tab.id] = true;
+    	updateSettings(urlKey, {url : urlKey, enabled : true});
     }
     
     if(request.method == 'setDisabled'){
-    	//setDisabled();
-    	iconStatus[sender.tab.id] = false;
+    	updateSettings(urlKey, {url : urlKey, enabled : false});
     }
     
 });
 
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
+	console.log('tab updated');
+
+	updateIcon();
+	
+});
+
 chrome.tabs.onActivated.addListener(function(activeInfo) {
 	console.log('tab activated');
-/*chrome.tabs.getCurrent(function(tab){
-	console.log('getCurrent');
-console.log(tab);
-	});*/
-	/*chrome.tabs.sendMessage(activeInfo.tabId, {method : 'updateStatus', from : 'tab activated'}, function(res){
-	 		console.log(chrome.runtime.lastError);
-	 		if(!res) return;
-	 		console.log('executed from client '+res.data);
-	 });*/
-	
-	/*var port = chrome.tabs.connect(activeInfo.tabId);
-
-	port.onMessage.addListener(function(msg) {
-		console.log(chrome.runtime.lastError);
-		console.log('message from '+ activeInfo.tabId);
-		console.log(msg);
-
-		if(msg.data == 'connected'){
-			chrome.tabs.get(activeInfo.tabId, function(tab){
-				var url = tab.url.replace(/([^#]*)#./, '$1');
-
-	/*			getStorage(url, function(settings){
-					var enabled = false;
-
-					if('enabled' in settings){
-						enabled = settings.enabled;
-					}
-console.log(enabled);
-					if(enabled === true){
-						setEnabled();
-					}else{
-						setDisabled();
-					}
-
-					port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
-
-				});
-
-			});
-		}
-	});*/
 
 	chrome.tabs.get(activeInfo.tabId, function(tab){
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
-console.log(url);
-		if(url.match(/^https?/)){
-			var port = chrome.tabs.connect(tab.id);
+		var port = chrome.tabs.connect(tab.id);
 
-			port.onMessage.addListener(onMessage);
-
-			function onMessage(msg){
-				if(msg.data == 'connected'){
-					getStorage(url, function(settings){
-						/*var enabled = false;
-
-						if('enabled' in settings){
-							enabled = settings.enabled;
-						}
-			console.log(enabled);
-						if(enabled === true){
-							//setEnabled();
-						}else{
-							setDisabled();
-						}*/
-
-						port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
-
-					});
-				}
+		port.onMessage.addListener(function(msg){
+			if(msg.data == 'connected'){
+				getStorage(url, function(settings){
+					port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
+				});
 			}
-			
-		}
+		});
 
-		updateIcon(tab);
+		updateIcon();
 	});
-
-	
-
-	console.log(iconStatus);
-
-
 });
 
 // Called when the user clicks on the browser action.
 chrome.browserAction.onClicked.addListener(function(tab) {
  
  var page_url = tab.url.replace(/([^#]*)#.*/, '$1');
-
- chrome.storage.local.get(page_url, init);
-
- function init(saved){
- 	var settings = saved[page_url] || {},
- 		save = {};
+ var port = chrome.tabs.connect(tab.id);
+ 
+ getStorage(page_url, init);
+ 
+ function init(settings){
+ 	var save = {};
  	 console.log('settings');
 	 console.log(settings);
+	 
 	 if(!isEmpty(settings)){
 		 if(settings.enabled === true){
 			 settings.enabled = false;
@@ -166,17 +89,12 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 
 	 console.log('save');
 	 console.log(save);
-
-	 chrome.storage.local.set(save, function(){
-
-	 	if(chrome.runtime.lastError){
-	 		console.log(chrome.runtime.lastError);
-	 	}
-
-		 chrome.tabs.sendMessage(tab.id, {method : 'updateStatus', from : 'click'}, function(res){
-		 		console.log(chrome.runtime.lastError);
-		 		console.log('executed from client '+res.data);
-		 });
+	 
+	 setStorage(save, function(){
+		 console.log('setStorage is successful');
+		// chrome.tabs.sendMessage(tab.id, {method : 'updateStatus', settings : settings, from : 'click'});
+		 port.postMessage({method: "updateStatus", settings : settings, from : 'click'});
+		 updateIcon();
 	 });
  }  
 });
@@ -234,31 +152,86 @@ function getStorage(key, callback){
 	});
 }
 
-function updateIcon(tab){
+function setStorage(save, callback){
+	chrome.storage.local.set(save, function(){
+		if(chrome.runtime.lastError){
+			console.log('error in setStorage save');
+	 		console.log(chrome.runtime.lastError);
+	 		return;
+	 	}
+		
+		if(typeof callback == 'function'){
+			callback();
+		}
+	});
+}
+
+function updateSettings(urlKey, changes, callback){
+	getStorage(urlKey, function(settings){
+		var save = {};
+		
+		for(var key in changes){
+			if(changes.hasOwnProperty(key)){
+				settings[key] = changes[key];
+			}
+		}
+		
+		save[urlKey] = settings;
+		
+		setStorage(save, function(){
+			if(typeof callback == 'function'){
+				callback();
+			}
+		});
+	});
+}
+
+function updateIcon(){
 	console.log('updateIcon');
-
-		console.log('tab from updateIcon');
-		console.log(tab);
-		if(typeof tab == 'undefined'){
-			setDisabled();
-		}else{
-
-			var id = tab.id;
-
-			if(id in iconStatus){
-				if(iconStatus[id] === true){
-					console.log('iconStatus[ '+id+' ] is true');
+	
+	chrome.tabs.query(
+	  {currentWindow: true, active : true, windowType : 'normal'},
+	  function(tabArray){
+		  var currentTab = tabArray[0];
+		console.log(currentTab);
+		//don't change anything if there is no result => the current tab must be a devtools tab
+		if(typeof currentTab == 'undefined'){		
+			return;
+		}
+		
+		//otherwise update the icon
+		var id = currentTab.id;
+		var keyUrl = currentTab.url.replace(/([^#]*)#.*/, '$1');
+		
+		getStorage(keyUrl, function(settings){
+			if('enabled' in  settings){
+				if(settings.enabled === true){
 					setEnabled();
 				}else{
-					console.log('iconStatus[ '+id+' ] is false');
 					setDisabled();
 				}
 			}else{
-				console.log('no '+id+' in iconStatus');
 				setDisabled();
 			}
-		}
-	
+		});
+		
+		/*if(id in iconStatus){
+			if(iconStatus[id] === true){
+				console.log('iconStatus[ '+id+' ] is true');
+				setEnabled();
+			}else{
+				console.log('iconStatus[ '+id+' ] is false');
+				setDisabled();
+			}
+		}else{
+			//for non http tabs
+			console.log('no '+id+' in iconStatus');
+			iconStatus[id] = false;
+			setDisabled();
+		}*/
+
+	  }
+	);	
 }
 
 function setEnabled(tab){
