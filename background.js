@@ -20,9 +20,11 @@ chrome.runtime.onConnect.addListener(function(port){
 	port.onMessage.addListener(function(post) {
 		console.log('in port on message');
 		console.log(post);
+		
 		var urlKey = port.sender.tab.url.replace(/([^#]*)#.*/, '$1');
+	
 		if(post.method == 'updateSettings'){
-
+	
 			updateSettings(urlKey, post.data, function(){
 				console.log('updated settings');
 			});
@@ -35,37 +37,42 @@ chrome.runtime.onConnect.addListener(function(port){
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var urlKey = sender.tab.url.replace(/([^#]*)#.*/, '$1');
 		console.log('in runtime on message');
-	console.log(request);
-    if (request.method == 'getStorage'){
+		console.log(request);
+    
+	if (request.method == 'getStorage'){
          getStorage(urlKey, function(result){
     		 sendResponse({data: result});  
          });
     	 
     	 return true;
     }
-
-    if(request.method == 'setEnabled'){
-    	//updateSettings(urlKey, {url : urlKey, enabled : true});
-    }
-    
-    if(request.method == 'setDisabled'){
-    	//updateSettings(urlKey, {url : urlKey, enabled : false});
-    }
-
-    if(request.method == 'updateSettings'){
-		updateSettings(urlKey, request.data);
-	}
     
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
 	console.log('tab updated');
+	console.log(changeInfo);
 	//chrome.tabs.sendMessage(tab.id, {method : 'install', from : 'tab updated'});
-	var port = chrome.tabs.connect(tabId);
-	port.postMessage({method : 'install', from : 'tab updated'});
+	if(changeInfo.status == 'complete'){
+		var url = tab.url.replace(/([^#]*)#.*/, '$1');
+		var port = chrome.tabs.connect(tab.id);
+		
+		getStorage(url, function(settings){
+			if(isEmpty(settings)){
+				settings = {
+					enabled : false,
+					m1Top : null,
+					m2Top : null,
+					url : url
+				}
+			}
+			
+			port.postMessage({method : 'install', settings : settings, from : 'tab updated'});
+			
+			updateIcon();
+		});
+	}
 
-	updateIcon();
-	
 });
 
 chrome.tabs.onActivated.addListener(function(activeInfo) {
