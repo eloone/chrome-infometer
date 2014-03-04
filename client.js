@@ -1,30 +1,37 @@
 /* * * * activation * * * */
 console.log('CLIENT JS NEW');
 
-var EventProxy = document.createElement('div');
+var EventProxy = new ExtensionEventProxy();
+var scrollEvent = new ExtensionEvent('scroll');
+var resizeEvent = new ExtensionEvent('resize');
+
+window.addEventListener('scroll', function(){
+	EventProxy.emit(scrollEvent);
+});
+
+window.addEventListener('resize', function(){
+	EventProxy.emit(resizeEvent);
+});
 
 chrome.runtime.onConnect.addListener(function(port) {
 	port.postMessage({data : 'connected'});
 
 	port.onMessage.addListener(function onMessage(request) {
-
+console.log(request);
 		if(request.method == 'install'){
-			if(document.readyState == 'complete'){
 				console.log('install event from port');
 
-				//this is equivalent to a page load
+				// this is equivalent to a page load
 				chromeInfometer = new Extension(request.settings);
-				//chromeInfometer.init(request.settings);
-				
+					
 				port.postMessage({data : 'installed Extension from port'});
-			}
 		}
 
-		//called when clicked and when tab is activated	
+		// called when clicked and when tab is activated
 		if(request.method == 'updateStatus'){
 			if(document.readyState == 'complete'){
 				if(getCurrentExtension()){
-					chromeInfometer.update(request.settings);
+					chromeInfometer.init(request.settings);
 
 					port.postMessage({data : 'extension is updated'});
 				}else{
@@ -48,89 +55,70 @@ function getCurrentExtension(){
 }
 
 function Extension(settings){
-	var _extension = this;
 
-	_extension.settings = settings;
+	this.settings = settings || {};
 	
-	_exetnsion.port = chrome.runtime.connect();
-	
-	init(settings);
-	
-	function init(settings){
+	this.port = chrome.runtime.connect();
 
-		_extension.update(settings);
-		
-		/*chrome.runtime.sendMessage({method: "getStorage"}, function(res){
+	this.init(settings);
 
-			if(res && 'data' in res){
-				_extension.update(res.data);
-			}
-			//else //the extension has never been activated on this url or nothing returned from chrome.storage
+}
 
-			//else log
-		});*/
-	};
-		
-	this.update = function(settings){
+Extension.prototype = {
+	init :	function(settings){
 		console.log('settings before update');
 		console.log(settings);
 		
 		if(isUndefined(settings)){
-			//problem in getting data in storage
+			// problem in getting data in storage
 			return;
 		}
 
 		if(isEmpty(settings)){
-			_extension.settings.enabled = false;
+			this.settings.enabled = false;
+			console.log('unexpected format for settings in init');
+			return;
 		}else{
-
-			if(typeof settings.enabled == 'undefined'){
-				console.log('unexpected format for settings in update ');
-				return;
-			}
-
-			_extension.settings = settings;
+			this.settings = settings;
 		}
 
-		console.log('_extension.settings in update');
-		console.log(_extension.settings);
+		console.log('self.settings in update');
+		console.log(this.settings);
 
-		if(_extension.settings.enabled === true){
+		if(this.settings.enabled === true){
 			this.enable();
 		}else{
 			this.disable();
-		}
-		
-	};
-	
-	this.enable = function(){
+		}			
+	},
+			
+	enable : function(){
 		console.log('enable function');
 		this.cleanDom();
 
-		_extension.viewportHeight = window.innerHeight;
-		_extension.m1 = new Marker(['chrome-extension-infometer-marker1']);
-		_extension.m2 = new Marker(['chrome-extension-infometer-marker2']);
-		_extension.header = new Header();
+		this.viewportHeight = window.innerHeight;
+		this.m1 = new Marker(['chrome-extension-infometer-marker1']);
+		this.m2 = new Marker(['chrome-extension-infometer-marker2']);
+		this.header = new Header();
 
 		this.attachEvents();
 
-		if(_extension.settings.m1Top !== null){
-			_extension.m1.moveTo(_extension.settings.m1Top);
+		if(this.settings.m1Top !== null){
+			this.m1.moveTo(this.settings.m1Top);
 		}else{
-			_extension.m1.moveTo(60);
+			this.m1.moveTo(60);
 		}
 
-		if(_extension.settings.m2Top !== null){			
-			_extension.m2.moveTo(_extension.settings.m2Top);
+		if(this.settings.m2Top !== null){			
+			this.m2.moveTo(this.settings.m2Top);
 		}else{
-			_extension.m2.moveTo(200);
+			this.m2.moveTo(200);
 		}
 		
-		_extension.calculateProgress();
-		
-	};
-	
-	this.disable = function(){
+		this.calculateProgress();		
+	},
+			
+	disable : function(){
 		console.log('disable function');
 		this.cleanDom();
 		
@@ -139,53 +127,58 @@ function Extension(settings){
 		this.detachEvents();
 
 		delete this;
-	};
+	},
 	
-	this.attachEvents = function(){
+	attachEvents : function(){
+		var self = this;
+		console.log('self in attachEvents');
+
 		this.detachEvents();
 		
-		window.addEventListener('scroll', _extension.onWindowScroll);
+		EventProxy.listen('scroll', function(){self.onWindowScroll()});
 		
-		window.addEventListener('resize', _extension.onWindowResize);
+		EventProxy.listen('resize', function(){self.onWindowResize()});
 	
-		EventProxy.addEventListener('overlayClicked', _extension.onOverlayClick);
+		EventProxy.listen('overlayClicked', function(e){self.onOverlayClick(e)});
 		
-		EventProxy.addEventListener('markerMovedAway',  _extension.onMarkerMoved);
+		EventProxy.listen('markerMovedAway', function(){self.onMarkerMoved()});
 		
-		EventProxy.addEventListener('markerClicked',  _extension.onMarkerClicked);
+		EventProxy.listen('markerClicked', function(){self.onMarkerClicked()});
 
-		EventProxy.addEventListener('headerClicked',  _extension.onHeaderClicked);
-	};
+		EventProxy.listen('headerClicked', function(){self.onHeaderClicked()});
+	},
 	
-	this.detachEvents = function(){
-		window.removeEventListener('scroll', _extension.onWindowScroll);
+	detachEvents : function(){
+		var self = this;
 		
-		window.removeEventListener('resize', _extension.onWindowResize);
+		EventProxy.unlisten('scroll', function(){self.onWindowScroll()});
+		
+		EventProxy.unlisten('resize', function(){self.onWindowResize()});
 	
-		EventProxy.removeEventListener('overlayClicked', _extension.onOverlayClick);
+		EventProxy.unlisten('overlayClicked', function(e){self.onOverlayClick(e)});
 		
-		EventProxy.removeEventListener('markerMovedAway', _extension.onMarkerMoved);
+		EventProxy.unlisten('markerMovedAway', function(){self.onMarkerMoved()});
 		
-		EventProxy.removeEventListener('markerClicked',  _extension.onMarkerClicked);
+		EventProxy.unlisten('markerClicked',  function(){self.onMarkerClicked()});
 
-		EventProxy.removeEventListener('headerClicked',  _extension.onHeaderClicked);
-	};
+		EventProxy.unlisten('headerClicked',  function(){self.onHeaderClicked()});
+	},
 	
-	this.calculateProgress = function(){
-		if(_extension.m1.positioned == 'final' && _extension.m2.positioned == 'final'){
-			var viewedHeight = _extension.viewportHeight - _extension.m1.screenTop() - Math.max(0, _extension.viewportHeight - _extension.m2.screenTop()) ;
+	calculateProgress : function(){
+		if(this.m1.positioned == 'final' && this.m2.positioned == 'final'){
+			var viewedHeight = this.viewportHeight - this.m1.screenTop() - Math.max(0, this.viewportHeight - this.m2.screenTop()) ;
 
-			var progress = Math.max((viewedHeight/_extension.heightToView)*100, 0);
+			var progress = Math.max((viewedHeight/this.heightToView)*100, 0);
 
 			this.header.progressBar.style.width = progress+'%';
 		}
-	};
+	},
 	
-	this.getHeightToView = function(){
-		return Math.abs(_extension.m2.top() - _extension.m1.top());
-	};
-
-	this.cleanDom = function(){
+	getHeightToView : function(){
+		return Math.abs(this.m2.top() - this.m1.top());
+	},
+	
+	cleanDom : function(){
 		var elts = document.querySelectorAll('.chrome-extension-infometer');
 
 		if(elts.length > 0){
@@ -194,63 +187,129 @@ function Extension(settings){
 			}
 		}
 
-	};
+	},
 	
-	/* * * * events handlers * * * */
-	this.onWindowScroll = function(){
-		_extension.calculateProgress();	
-	};
+	onWindowScroll : function(){
+		this.calculateProgress();	
+	},
 	
-	this.onWindowResize = function(){
-		_extension.viewportHeight = window.innerHeight;
-		_extension.calculateProgress();
-	};
+	onWindowResize : function(){
+		this.viewportHeight = window.innerHeight;
+		this.calculateProgress();
+	},
 	
-	this.onOverlayClick = function(e){
-		console.log('this.onOverlayClick');
-		_extension.m1.updatePosition(e.pageY);
-		_extension.m2.updatePosition(e.pageY);
-	};
+	onOverlayClick : function(e){
+		this.m1.updatePosition(e.pageY);
+		this.m2.updatePosition(e.pageY);
+	},
 
-	this.onHeaderClicked = function(){
-		var m1Top = _extension.m1.top() - _extension.m1.fixedHeight()/2;
+	onHeaderClicked : function(){
+		var m1Top = this.m1.top() - this.m1.fixedHeight()/2;
 
 		window.scrollTo(0, m1Top);
-	};
+	},
 	
-	this.onMarkerMoved = function(){
-		var save = {};
-		console.log('marker moved away');
-		
-		_extension.header.removeTooltip();
+	onMarkerMoved : function(){
+		var save = {}, self = this;
 
-		if(_extension.m1.top() > _extension.m2.top()){
-			var tmp = _extension.m2;
-			_extension.m2 = _extension.m1;
-			_extension.m1 = tmp;
+		this.header.removeTooltip();
+
+		if(this.m1.top() > this.m2.top()){
+			var tmp = this.m2;
+			this.m2 = this.m1;
+			this.m1 = tmp;
 		}
 
-		_extension.settings.m1Top = _extension.m1.positioned == 'final' ? _extension.m1.top() : _extension.settings.m1Top;
-		_extension.settings.m2Top = _extension.m2.positioned == 'final' ? _extension.m2.top() : _extension.settings.m2Top;
+		this.settings.m1Top = this.m1.positioned == 'final' ? this.m1.top() : this.settings.m1Top;
+		this.settings.m2Top = this.m2.positioned == 'final' ? this.m2.top() : this.settings.m2Top;
 
-		_extension.port.postMessage({
+		this.port.postMessage({
 			method : 'updateSettings',
 			data : {
-				m1Top : _extension.settings.m1Top,
-				m2Top : _extension.settings.m2Top
+				m1Top : self.settings.m1Top,
+				m2Top : self.settings.m2Top
 			}
 		});
 		
-		_extension.heightToView = _extension.getHeightToView();
+		this.heightToView = this.getHeightToView();
 
-		_extension.calculateProgress();
+		this.calculateProgress();
+	},
+	
+	onMarkerClicked : function(){
+		this.header.addTooltip();
+
+		this.overlay = new Overlay();	
+	}
+};
+
+function ExtensionEvent(type, data){
+	if(typeof type !== 'string'){
+		throw new Error('Expecting type to be a string in ExtensionEvent');
+	}
+	
+	this.type = type;
+	this.data = data || {};
+}
+
+function ExtensionEventProxy(){
+	var events = {};
+	
+	this.emit = function(event){
+		if(!(event instanceof ExtensionEvent)){
+			throw new Error('Expecting event to be an instance of ExtensionEvent');
+		}
+		
+		if(!events[event.type]){
+			return;
+		}
+		
+		var listeners = events[event.type];
+		
+		for(var i = 0; i < listeners.length; i++){
+			if(typeof listeners[i] === 'function'){
+				listeners[i](event);
+			}
+		}					
+		
 	};
 	
-	this.onMarkerClicked = function(){
-		_extension.header.addTooltip();
+	this.listen = function(eventType, handler){
+		if(typeof handler !== 'function'){
+			throw new Error('Expecting handler to be an instance of Function');
+		}
 
-		_extension.overlay = new Overlay();
+		if(typeof(eventType) !== 'string'){
+			throw new Error('Expecting eventType to be a string');
+		}
+		
+		if(typeof events[eventType] == 'undefined'){
+			events[eventType] = [handler];
+		}else{
+			events[eventType].push(handler);
+		}		
+	};
 	
+	this.unlisten = function(eventType, handler){
+		if(typeof handler !== 'function'){
+			throw new Error('Expecting handler to be an instance of Function');
+		}
+		
+		if(typeof(eventType) !== 'string'){
+			throw new Error('Expecting eventType to be a string');
+		}
+		
+		if(!events[eventType]){
+			return;
+		}
+		
+		var listeners = events[eventType];
+		
+		for(var i = 0; i < listeners.length; i ++ ){
+			if(listeners[i] == handler || listeners[i].toString() == handler.toString() ){
+				listeners.splice(i, 1);
+			}
+		}	
 	};
 }
 
@@ -258,7 +317,7 @@ function Header(){
 	var progress = document.createElement('span'),
 		header = document.createElement('div'),
 		tooltip = document.createElement('p'),
-		eventHeaderClicked = new Event('headerClicked');
+		eventHeaderClicked = new ExtensionEvent('headerClicked');
 	
 	progress.className = 'chrome-extension-infometer-progress';
 	header.className = 'chrome-extension-infometer chrome-extension-infometer-header';
@@ -283,7 +342,7 @@ function Header(){
 	};
 
 	this.node.addEventListener('click', function(e){
-		EventProxy.dispatchEvent(eventHeaderClicked);
+		EventProxy.emit(eventHeaderClicked);
 	});
 	
 	document.body.className += ' chrome-extension-infometer-body';
@@ -292,7 +351,7 @@ function Header(){
 
 function Overlay(){
 	var tmpOverlay = document.createElement('div'),
-		eventOverlayClicked = new Event('overlayClicked'),
+		eventOverlayClicked = new ExtensionEvent('overlayClicked'),
 		markerSvg = chrome.extension.getURL("images/marker.svg");
 
 	tmpOverlay.className = 'chrome-extension-infometer chrome-extension-infometer-overlay';
@@ -307,7 +366,7 @@ function Overlay(){
 		eventOverlayClicked.pageY = e.pageY;
 		tmpOverlay.style.cursor = 'default';
 
-		EventProxy.dispatchEvent(eventOverlayClicked);
+		EventProxy.emit(eventOverlayClicked);
 
 		tmpOverlay.removeEventListener('click', onClick);
 		document.body.removeChild(tmpOverlay);
@@ -338,7 +397,7 @@ function Marker(classes){
 
 		if($this.positioned == 'final'){
 
-			EventProxy.dispatchEvent($this.eventMarkerClicked);
+			EventProxy.emit($this.eventMarkerClicked);
 			
 			$this.node.src = $this.srcDashed;
 			
@@ -354,8 +413,8 @@ function Marker(classes){
 }
 
 Marker.prototype = {
-	eventMoved : new Event('markerMovedAway'),
-	eventMarkerClicked : new Event('markerClicked'),
+	eventMoved : new ExtensionEvent('markerMovedAway'),
+	eventMarkerClicked : new ExtensionEvent('markerClicked'),
 	top : function(){
 		return this.node.offsetTop + this.fixedHeight()/2;
 	},
@@ -376,7 +435,7 @@ Marker.prototype = {
 		
 		this.positioned = 'final';
 		
-		EventProxy.dispatchEvent(this.eventMoved);
+		EventProxy.emit(this.eventMoved);
 	},
 	fixedHeight : function(){
 		if(this.positioned == 'final'){
@@ -395,7 +454,7 @@ Marker.prototype = {
 	}			
 };
 
-//performs shallow equal between 2 objects
+// performs shallow equal between 2 objects
 function equals(o1, o2){
   return JSON.stringify(o1) == JSON.stringify(o2);
 }
