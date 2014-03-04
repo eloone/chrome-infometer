@@ -1,15 +1,17 @@
 /* * * * activation * * * */
-//var PORT = chrome.runtime.connect();
 
 //called when page is reloaded
-window.addEventListener('load', function(){
-	chromeInfometer = new Extension();
-	console.log(chromeInfometer);
-	chromeInfometer.init();
+//window.removeEventListener('load', onLoad);
+//window.addEventListener('load', onLoad);
 
+console.log('CLIENT JS NEW');
+
+function onLoad(){
 	console.log('load event');
-});
-console.log('CLIENT JS');
+
+	chromeInfometer = new Extension();
+	chromeInfometer.init();
+}
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 	if(!request){
@@ -20,6 +22,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 	if(request.method == 'install'){
 		if(document.readyState == 'complete'){
 			console.log('install event');
+			console.log('new install event');
 			//this is equivalent to a page load
 			chromeInfometer = new Extension();
 			chromeInfometer.init();
@@ -28,41 +31,49 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 	}
 
 });
-//chrome.runtime.onMessage.addListener(onMessage);
+
 chrome.runtime.onConnect.addListener(function(port) {
 	port.postMessage({data : 'connected'});
-
+	console.log('connected to port');
+	console.log(port);
 	port.onMessage.addListener(function onMessage(request) {
 		console.log('on message');
 		console.log(request);
-	
-	//called when clicked and when tab is activated	
-	if(request.method == 'updateStatus'){
-		if(document.readyState == 'complete'){
-			if(getCurrentExtension()){
-				chromeInfometer.update(request.settings);
-				console.log('updateStatus');
-				console.log(request.from);
-				//sendResponse({data : 'extension is updated'});
-				port.postMessage({data : 'extension is updated'});
-			}else{
-				//sendResponse({data : 'no extension installed'});
-				port.postMessage({data : 'no extension installed'});
-			}
-		}else{
-			//sendResponse({data : 'document not ready'});
-
-			port.postMessage({data : 'document not ready'});
-		}
 		
-	}
+		if(request.method == 'install'){
+			if(document.readyState == 'complete'){
+				console.log('install event from port');
+				console.log('new install event from port');
+				//this is equivalent to a page load
+				chromeInfometer = new Extension();
+				chromeInfometer.init();
+				
+				port.postMessage({data : 'installed Extension from port'});
+			}
+		}
 
+		//called when clicked and when tab is activated	
+		if(request.method == 'updateStatus'){
+			if(document.readyState == 'complete'){
+				if(getCurrentExtension()){
+					chromeInfometer.update(request.settings);
+					chromeInfometer.port = port;
+					console.log('updateStatus');
+					console.log(request.from);
+					port.postMessage({data : 'extension is updated'});
+				}else{
+					port.postMessage({data : 'no extension installed'});
+				}
+			}else{
+				port.postMessage({data : 'document not ready'});
+			}
+			
+		}
+
+	});
 });
-});
 
-
-
-
+var mockDocument = document.createElement('div');
 
 /* * * * librairies * * * */
 function getCurrentExtension(){
@@ -80,12 +91,10 @@ function Extension(){
 
 	this.init = function(){
 	
-		var pageUrl = window.location.href.replace(/([^#]*)#.*/, '$1');
+		_extension.pageUrl = window.location.href.replace(/([^#]*)#.*/, '$1');
 
-		chrome.runtime.sendMessage({method: "getStorage", key : pageUrl}, function(res){
-			/*var settings = null;
-*/
-			console.log(res);
+		chrome.runtime.sendMessage({method: "getStorage", key : _extension.pageUrl}, function(res){
+
 			if(res && 'data' in res){
 				_extension.update(res.data);
 			}
@@ -94,17 +103,16 @@ function Extension(){
 			//else log
 		});
 
+		this.port = chrome.runtime.connect();
+
 	};
 		
 	this.update = function(settings){
 		console.log('settings before update');
 		console.log(settings);
-		/*if(equals(_extension.settings, settings)){
-			//no change of settings do nothing
-			console.log('no change in extension settings');
-			return;
-		}*/
-
+		
+		_extension.pageUrl = window.location.href.replace(/([^#]*)#.*/, '$1');
+		
 		if(isUndefined(settings)){
 			//problem in getting data in storage
 			return;
@@ -180,13 +188,22 @@ function Extension(){
 		
 		window.addEventListener('resize', _extension.onWindowResize);
 	
-		document.addEventListener('overlayClicked', _extension.onOverlayClick);
+		/*document.addEventListener('overlayClicked', _extension.onOverlayClick);
 		
-		document.addEventListener('markerMoved',  _extension.onMarkerMoved);
+		document.addEventListener('markerMovedAway',  _extension.onMarkerMoved);
 		
 		document.addEventListener('markerClicked',  _extension.onMarkerClicked);
 
-		document.addEventListener('headerClicked',  _extension.onHeaderClicked);
+		document.addEventListener('headerClicked',  _extension.onHeaderClicked);*/
+
+
+		mockDocument.addEventListener('overlayClicked', _extension.onOverlayClick);
+		
+		mockDocument.addEventListener('markerMovedAway',  _extension.onMarkerMoved);
+		
+		mockDocument.addEventListener('markerClicked',  _extension.onMarkerClicked);
+
+		mockDocument.addEventListener('headerClicked',  _extension.onHeaderClicked);
 	};
 	
 	this.detachEvents = function(){
@@ -194,13 +211,22 @@ function Extension(){
 		
 		window.removeEventListener('resize', _extension.onWindowResize);
 	
-		document.removeEventListener('overlayClicked', _extension.onOverlayClick);
+		/*document.removeEventListener('overlayClicked', _extension.onOverlayClick);
 		
-		document.removeEventListener('markerMoved', _extension.onMarkerMoved);
+		document.removeEventListener('markerMovedAway', _extension.onMarkerMoved);
 		
 		document.removeEventListener('markerClicked',  _extension.onMarkerClicked);
 
-		document.removeEventListener('headerClicked',  _extension.onHeaderClicked);
+		document.removeEventListener('headerClicked',  _extension.onHeaderClicked);*/
+
+
+		mockDocument.removeEventListener('overlayClicked', _extension.onOverlayClick);
+		
+		mockDocument.removeEventListener('markerMovedAway', _extension.onMarkerMoved);
+		
+		mockDocument.removeEventListener('markerClicked',  _extension.onMarkerClicked);
+
+		mockDocument.removeEventListener('headerClicked',  _extension.onHeaderClicked);
 	};
 	
 	this.calculateProgress = function(){
@@ -253,21 +279,38 @@ function Extension(){
 	
 	this.onMarkerMoved = function(){
 		var save = {};
+		console.log('marker moved away');
 		
 		_extension.header.removeTooltip();
-		
+
 		if(_extension.m1.top() > _extension.m2.top()){
 			var tmp = _extension.m2;
 			_extension.m2 = _extension.m1;
 			_extension.m1 = tmp;
 		}
 
+		//var port = chrome.runtime.connect();
+
 		_extension.settings.m1Top = _extension.m1.positioned == 'final' ? _extension.m1.top() : _extension.settings.m1Top;
 		_extension.settings.m2Top = _extension.m2.positioned == 'final' ? _extension.m2.top() : _extension.settings.m2Top;
 
-		save[_extension.pageUrl] = _extension.settings;
+		//save[_extension.pageUrl] = _extension.settings;
 
-		chrome.storage.local.set(save);
+		/*chrome.storage.local.set(save, function(){
+			console.log(chrome.runtime.lastError);
+			console.log('saved in content script');
+		});*/
+console.log(_extension.port);
+
+//var port = chrome.runtime.connect();
+
+		_extension.port.postMessage({
+			method : 'updateSettings',
+			data : {
+				m1Top : _extension.settings.m1Top,
+				m2Top : _extension.settings.m2Top
+			}
+		});
 		
 		_extension.heightToView = _extension.getHeightToView();
 
@@ -311,7 +354,9 @@ function Header(){
 	};
 
 	this.node.addEventListener('click', function(e){
-		document.dispatchEvent(eventHeaderClicked);
+		//document.dispatchEvent(eventHeaderClicked);
+
+		mockDocument.dispatchEvent(eventHeaderClicked);
 	});
 	
 	document.body.className += ' chrome-extension-infometer-body';
@@ -335,7 +380,10 @@ function Overlay(){
 	function onClick(e){
 		eventOverlayClicked.pageY = e.pageY;
 		tmpOverlay.style.cursor = 'default';
-		document.dispatchEvent(eventOverlayClicked);
+		//document.dispatchEvent(eventOverlayClicked);
+
+		mockDocument.dispatchEvent(eventOverlayClicked);
+
 		tmpOverlay.removeEventListener('click', onClick);
 		document.body.removeChild(tmpOverlay);
 		e.stopPropagation();
@@ -364,7 +412,9 @@ function Marker(classes){
 		console.log('marker click');
 
 		if($this.positioned == 'final'){
-			document.dispatchEvent($this.eventMarkerClicked);
+			//document.dispatchEvent($this.eventMarkerClicked);
+
+			mockDocument.dispatchEvent($this.eventMarkerClicked);
 			
 			$this.node.src = $this.srcDashed;
 			
@@ -380,7 +430,7 @@ function Marker(classes){
 }
 
 Marker.prototype = {
-	eventMoved : new Event('markerMoved'),
+	eventMoved : new Event('markerMovedAway'),
 	eventMarkerClicked : new Event('markerClicked'),
 	top : function(){
 		return this.node.offsetTop + this.fixedHeight()/2;
@@ -402,7 +452,8 @@ Marker.prototype = {
 		
 		this.positioned = 'final';
 		
-		document.dispatchEvent(this.eventMoved);
+		//document.dispatchEvent(this.eventMoved);
+		mockDocument.dispatchEvent(this.eventMoved);
 	},
 	fixedHeight : function(){
 		if(this.positioned == 'final'){

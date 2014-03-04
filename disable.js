@@ -1,3 +1,1 @@
-$(document).ready(function(){
-	disableExtension();
-});
+console.log('disablejs');
