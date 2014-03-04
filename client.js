@@ -1,52 +1,20 @@
 /* * * * activation * * * */
-
-//called when page is reloaded
-//window.removeEventListener('load', onLoad);
-//window.addEventListener('load', onLoad);
-
 console.log('CLIENT JS NEW');
 
-function onLoad(){
-	console.log('load event');
-
-	chromeInfometer = new Extension();
-	chromeInfometer.init();
-}
-
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
-	if(!request){
-		sendResponse({data : 'no request object in install request'});
-		return;
-	}
-	//called when installed/updated/enabled
-	if(request.method == 'install'){
-		if(document.readyState == 'complete'){
-			console.log('install event');
-			console.log('new install event');
-			//this is equivalent to a page load
-			chromeInfometer = new Extension();
-			chromeInfometer.init();
-			sendResponse({data : 'installed Extension'});
-		}
-	}
-
-});
+var EventProxy = document.createElement('div');
 
 chrome.runtime.onConnect.addListener(function(port) {
 	port.postMessage({data : 'connected'});
-	console.log('connected to port');
-	console.log(port);
+
 	port.onMessage.addListener(function onMessage(request) {
-		console.log('on message');
-		console.log(request);
-		
+
 		if(request.method == 'install'){
 			if(document.readyState == 'complete'){
 				console.log('install event from port');
-				console.log('new install event from port');
+
 				//this is equivalent to a page load
-				chromeInfometer = new Extension();
-				chromeInfometer.init();
+				chromeInfometer = new Extension(request.settings);
+				//chromeInfometer.init(request.settings);
 				
 				port.postMessage({data : 'installed Extension from port'});
 			}
@@ -57,23 +25,18 @@ chrome.runtime.onConnect.addListener(function(port) {
 			if(document.readyState == 'complete'){
 				if(getCurrentExtension()){
 					chromeInfometer.update(request.settings);
-					chromeInfometer.port = port;
-					console.log('updateStatus');
-					console.log(request.from);
+
 					port.postMessage({data : 'extension is updated'});
 				}else{
 					port.postMessage({data : 'no extension installed'});
 				}
 			}else{
 				port.postMessage({data : 'document not ready'});
-			}
-			
+			}			
 		}
 
 	});
 });
-
-var mockDocument = document.createElement('div');
 
 /* * * * librairies * * * */
 function getCurrentExtension(){
@@ -84,16 +47,20 @@ function getCurrentExtension(){
 	return null;
 }
 
-function Extension(){
+function Extension(settings){
 	var _extension = this;
 
-	_extension.settings = {};
-
-	this.init = function(){
+	_extension.settings = settings;
 	
-		_extension.pageUrl = window.location.href.replace(/([^#]*)#.*/, '$1');
+	_exetnsion.port = chrome.runtime.connect();
+	
+	init(settings);
+	
+	function init(settings){
 
-		chrome.runtime.sendMessage({method: "getStorage", key : _extension.pageUrl}, function(res){
+		_extension.update(settings);
+		
+		/*chrome.runtime.sendMessage({method: "getStorage"}, function(res){
 
 			if(res && 'data' in res){
 				_extension.update(res.data);
@@ -101,17 +68,12 @@ function Extension(){
 			//else //the extension has never been activated on this url or nothing returned from chrome.storage
 
 			//else log
-		});
-
-		this.port = chrome.runtime.connect();
-
+		});*/
 	};
 		
 	this.update = function(settings){
 		console.log('settings before update');
 		console.log(settings);
-		
-		_extension.pageUrl = window.location.href.replace(/([^#]*)#.*/, '$1');
 		
 		if(isUndefined(settings)){
 			//problem in getting data in storage
@@ -149,7 +111,7 @@ function Extension(){
 		_extension.m1 = new Marker(['chrome-extension-infometer-marker1']);
 		_extension.m2 = new Marker(['chrome-extension-infometer-marker2']);
 		_extension.header = new Header();
-		console.log('enable');
+
 		this.attachEvents();
 
 		if(_extension.settings.m1Top !== null){
@@ -166,8 +128,6 @@ function Extension(){
 		
 		_extension.calculateProgress();
 		
-		chrome.runtime.sendMessage({method: "setEnabled"});
-		
 	};
 	
 	this.disable = function(){
@@ -177,33 +137,24 @@ function Extension(){
 		document.body.className = document.body.className.replace(/chrome-extension-infometer-body/g, '');
 		
 		this.detachEvents();
-		
-		chrome.runtime.sendMessage({method: "setDisabled"});
 
 		delete this;
 	};
 	
 	this.attachEvents = function(){
+		this.detachEvents();
+		
 		window.addEventListener('scroll', _extension.onWindowScroll);
 		
 		window.addEventListener('resize', _extension.onWindowResize);
 	
-		/*document.addEventListener('overlayClicked', _extension.onOverlayClick);
+		EventProxy.addEventListener('overlayClicked', _extension.onOverlayClick);
 		
-		document.addEventListener('markerMovedAway',  _extension.onMarkerMoved);
+		EventProxy.addEventListener('markerMovedAway',  _extension.onMarkerMoved);
 		
-		document.addEventListener('markerClicked',  _extension.onMarkerClicked);
+		EventProxy.addEventListener('markerClicked',  _extension.onMarkerClicked);
 
-		document.addEventListener('headerClicked',  _extension.onHeaderClicked);*/
-
-
-		mockDocument.addEventListener('overlayClicked', _extension.onOverlayClick);
-		
-		mockDocument.addEventListener('markerMovedAway',  _extension.onMarkerMoved);
-		
-		mockDocument.addEventListener('markerClicked',  _extension.onMarkerClicked);
-
-		mockDocument.addEventListener('headerClicked',  _extension.onHeaderClicked);
+		EventProxy.addEventListener('headerClicked',  _extension.onHeaderClicked);
 	};
 	
 	this.detachEvents = function(){
@@ -211,22 +162,13 @@ function Extension(){
 		
 		window.removeEventListener('resize', _extension.onWindowResize);
 	
-		/*document.removeEventListener('overlayClicked', _extension.onOverlayClick);
+		EventProxy.removeEventListener('overlayClicked', _extension.onOverlayClick);
 		
-		document.removeEventListener('markerMovedAway', _extension.onMarkerMoved);
+		EventProxy.removeEventListener('markerMovedAway', _extension.onMarkerMoved);
 		
-		document.removeEventListener('markerClicked',  _extension.onMarkerClicked);
+		EventProxy.removeEventListener('markerClicked',  _extension.onMarkerClicked);
 
-		document.removeEventListener('headerClicked',  _extension.onHeaderClicked);*/
-
-
-		mockDocument.removeEventListener('overlayClicked', _extension.onOverlayClick);
-		
-		mockDocument.removeEventListener('markerMovedAway', _extension.onMarkerMoved);
-		
-		mockDocument.removeEventListener('markerClicked',  _extension.onMarkerClicked);
-
-		mockDocument.removeEventListener('headerClicked',  _extension.onHeaderClicked);
+		EventProxy.removeEventListener('headerClicked',  _extension.onHeaderClicked);
 	};
 	
 	this.calculateProgress = function(){
@@ -266,7 +208,6 @@ function Extension(){
 	
 	this.onOverlayClick = function(e){
 		console.log('this.onOverlayClick');
-		console.log(e);
 		_extension.m1.updatePosition(e.pageY);
 		_extension.m2.updatePosition(e.pageY);
 	};
@@ -289,20 +230,8 @@ function Extension(){
 			_extension.m1 = tmp;
 		}
 
-		//var port = chrome.runtime.connect();
-
 		_extension.settings.m1Top = _extension.m1.positioned == 'final' ? _extension.m1.top() : _extension.settings.m1Top;
 		_extension.settings.m2Top = _extension.m2.positioned == 'final' ? _extension.m2.top() : _extension.settings.m2Top;
-
-		//save[_extension.pageUrl] = _extension.settings;
-
-		/*chrome.storage.local.set(save, function(){
-			console.log(chrome.runtime.lastError);
-			console.log('saved in content script');
-		});*/
-console.log(_extension.port);
-
-//var port = chrome.runtime.connect();
 
 		_extension.port.postMessage({
 			method : 'updateSettings',
@@ -354,9 +283,7 @@ function Header(){
 	};
 
 	this.node.addEventListener('click', function(e){
-		//document.dispatchEvent(eventHeaderClicked);
-
-		mockDocument.dispatchEvent(eventHeaderClicked);
+		EventProxy.dispatchEvent(eventHeaderClicked);
 	});
 	
 	document.body.className += ' chrome-extension-infometer-body';
@@ -369,7 +296,6 @@ function Overlay(){
 		markerSvg = chrome.extension.getURL("images/marker.svg");
 
 	tmpOverlay.className = 'chrome-extension-infometer chrome-extension-infometer-overlay';
-	//tmpOverlay.style.cursor = 'url('+markerSvg+'), auto !important';
 
 	tmpOverlay.style.setProperty("cursor", 'url('+markerSvg+'), auto', "important");
 	
@@ -380,9 +306,8 @@ function Overlay(){
 	function onClick(e){
 		eventOverlayClicked.pageY = e.pageY;
 		tmpOverlay.style.cursor = 'default';
-		//document.dispatchEvent(eventOverlayClicked);
 
-		mockDocument.dispatchEvent(eventOverlayClicked);
+		EventProxy.dispatchEvent(eventOverlayClicked);
 
 		tmpOverlay.removeEventListener('click', onClick);
 		document.body.removeChild(tmpOverlay);
@@ -412,9 +337,8 @@ function Marker(classes){
 		console.log('marker click');
 
 		if($this.positioned == 'final'){
-			//document.dispatchEvent($this.eventMarkerClicked);
 
-			mockDocument.dispatchEvent($this.eventMarkerClicked);
+			EventProxy.dispatchEvent($this.eventMarkerClicked);
 			
 			$this.node.src = $this.srcDashed;
 			
@@ -452,8 +376,7 @@ Marker.prototype = {
 		
 		this.positioned = 'final';
 		
-		//document.dispatchEvent(this.eventMoved);
-		mockDocument.dispatchEvent(this.eventMoved);
+		EventProxy.dispatchEvent(this.eventMoved);
 	},
 	fixedHeight : function(){
 		if(this.positioned == 'final'){
@@ -497,5 +420,3 @@ function isUndefined(v){
 
 	return false;
 }
-
-
