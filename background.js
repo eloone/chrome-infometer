@@ -56,7 +56,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
 	if(changeInfo.status == 'complete'){
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
 		var port = chrome.tabs.connect(tab.id);
-		
+	//chrome.storage.local.clear();	
 		getStorage(url, function(settings){
 			if(isEmpty(settings)){
 				settings = {
@@ -95,7 +95,7 @@ chrome.browserAction.onClicked.addListener(function(tab) {
  
  var page_url = tab.url.replace(/([^#]*)#.*/, '$1');
  var port = chrome.tabs.connect(tab.id);
- 
+ //chrome.storage.local.clear();
  getStorage(page_url, init);
  
  function init(settings){
@@ -196,6 +196,10 @@ function injectDisableJsIntoTab(tab) {
             file: 'disable.js'
         });
     
+}
+
+function getSettings(){
+	
 }
 
 function getStorage(key, callback){
