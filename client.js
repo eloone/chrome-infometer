@@ -31,9 +31,16 @@ console.log(request);
 		if(request.method == 'updateStatus'){
 			if(document.readyState == 'complete'){
 				if(getCurrentExtension()){
-					chromeInfometer.init(request.settings);
+					if(!equals(request.settings, chromeInfometer.settings)){
 
-					port.postMessage({data : 'extension is updated'});
+						chromeInfometer.init(request.settings);
+
+						port.postMessage({data : 'extension is updated'});
+
+					}else{
+						port.postMessage({data : 'extension is idle'});
+					}
+					
 				}else{
 					port.postMessage({data : 'no extension installed'});
 				}
@@ -81,9 +88,6 @@ Extension.prototype = {
 		}else{
 			this.settings = settings;
 		}
-
-		console.log('self.settings in update');
-		console.log(this.settings);
 
 		if(this.settings.enabled === true){
 			this.enable();

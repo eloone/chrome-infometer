@@ -1,16 +1,38 @@
+function syncStorage(){
+	console.log('hello extension');
+	setTimeout(syncStorage, 4000);
+}
+
+syncStorage();
+
+
 /* * * * chrome events * * * */
-chrome.management.onInstalled.addListener(function(info){
-	console.log('installed');
+setTimeout(function(){
+		console.log('hello me');
+	}, 1000);
+
+chrome.runtime.onInstalled.addListener(function(info){
+	console.log('installed or enabled');
 	refreshContentScripts();
 });
 
 chrome.management.onEnabled.addListener(function(info){
 	console.log('enabled');
+	chrome.runtime.reload();
 	refreshContentScripts();
 });
 
-chrome.management.onDisabled.addListener(function(info){
-	disableContentScripts();
+chrome.runtime.onSuspend.addListener(function(){
+	//disableContentScripts();
+	chrome.tabs.executeScript(tab.id, {
+            file: 'disable.js'
+        });
+});
+
+chrome.runtime.onSuspendCanceled.addListener(function (){
+	chrome.tabs.executeScript(tab.id, {
+            code: 'alert("suspended canceled")'
+        });
 });
 
 chrome.runtime.onConnect.addListener(function(port){
@@ -33,39 +55,16 @@ chrome.runtime.onConnect.addListener(function(port){
 	});
 });
 
-//Called when content script sends message
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	var urlKey = sender.tab.url.replace(/([^#]*)#.*/, '$1');
-		console.log('in runtime on message');
-		console.log(request);
-    
-	if (request.method == 'getStorage'){
-         getStorage(urlKey, function(result){
-    		 sendResponse({data: result});  
-         });
-    	 
-    	 return true;
-    }
-    
-});
-
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
 	console.log('tab updated');
 	console.log(changeInfo);
-	//chrome.tabs.sendMessage(tab.id, {method : 'install', from : 'tab updated'});
+
 	if(changeInfo.status == 'complete'){
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
-		var port = chrome.tabs.connect(tab.id);
+		
 	//chrome.storage.local.clear();	
-		getStorage(url, function(settings){
-			if(isEmpty(settings)){
-				settings = {
-					enabled : false,
-					m1Top : null,
-					m2Top : null,
-					url : url
-				}
-			}
+		getSettings(url, function(settings){
+			var port = chrome.tabs.connect(tab.id);
 			
 			port.postMessage({method : 'install', settings : settings, from : 'tab updated'});
 			
@@ -82,7 +81,7 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
 		var port = chrome.tabs.connect(tab.id);
 
-		getStorage(url, function(settings){
+		getSettings(url, function(settings){
 			port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
 		});
 
@@ -93,43 +92,29 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 // Called when the user clicks on the browser action.
 chrome.browserAction.onClicked.addListener(function(tab) {
  
- var page_url = tab.url.replace(/([^#]*)#.*/, '$1');
+ var urlKey = tab.url.replace(/([^#]*)#.*/, '$1');
  var port = chrome.tabs.connect(tab.id);
  //chrome.storage.local.clear();
- getStorage(page_url, init);
+ getSettings(urlKey, init);
  
  function init(settings){
- 	var save = {};
  	 console.log('settings');
 	 console.log(settings);
-	 
-	 if(!isEmpty(settings)){
-		 if(settings.enabled === true){
-			 settings.enabled = false;
-		 }else{
-			 settings.enabled = true;
-		 }
+
+	 if(settings.enabled === true){
+	 	settings.enabled = false;
 	 }else{
-		 settings = {
-			enabled : true,
-			m1Top : null,
-			m2Top : null,
-			url : page_url
-		 };
+	 	settings.enabled = true;
 	 }
 
-	 save[page_url] = settings;
+	updateSettings(urlKey, settings, function(){
 
-	 console.log('save');
-	 console.log(save);
-	 
-	 setStorage(save, function(){
-		 console.log('setStorage is successful');
-
-		 port.postMessage({method: "updateStatus", settings : settings, from : 'click on icon'});
-		 updateIcon();
-	 });
+		port.postMessage({method: "updateStatus", settings : settings, from : 'click on icon'});
+		
+		updateIcon();
+	});
  }  
+
 });
 
 /* * * * libraries * * * */
@@ -163,7 +148,6 @@ function injectJsIntoTab(tab) {
             file: 'client.js'//scripts[i]
         }, function(){
         	if(i == s){
-        		//chrome.tabs.sendMessage(tab.id, {method : 'install', from : 'injector'});
         		var port = chrome.tabs.connect(tab.id);
         		port.postMessage({method : 'install', from : 'injector'});
         	}
@@ -198,15 +182,32 @@ function injectDisableJsIntoTab(tab) {
     
 }
 
-function getSettings(){
+function getSettings(url, callback){
 	
+	getStorage(url, function(settings){
+
+		if(isEmpty(settings)){
+			settings = {
+				enabled : false,
+				m1Top : null,
+				m2Top : null,
+				url : url
+			};
+		}
+		
+		if(typeof callback == 'function'){
+			callback(settings);
+		}
+	});
 }
 
 function getStorage(key, callback){
-
+	
 	chrome.storage.local.get(key, function(res){
-		console.log(chrome.runtime.lastError);
-		console.log(res);
+		
+		if(chrome.runtime.lastError){
+			console.log(chrome.runtime.lastError);
+		}
 		//if nothing res = {}
 		var result = res;
 
@@ -271,13 +272,11 @@ function updateIcon(){
 		var id = currentTab.id;
 		var urlKey = currentTab.url.replace(/([^#]*)#.*/, '$1');
 		
-		getStorage(urlKey, function(settings){
-			if('enabled' in  settings){
-				if(settings.enabled === true){
-					setEnabled();
-				}else{
-					setDisabled();
-				}
+		console.log(currentTab);
+
+		getSettings(urlKey, function(settings){
+			if(settings.enabled === true){
+				setEnabled();
 			}else{
 				setDisabled();
 			}
