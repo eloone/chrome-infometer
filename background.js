@@ -1,10 +1,107 @@
-function syncStorage(){
-	console.log('hello extension');
-	setTimeout(syncStorage, 4000);
+var storageChangesQueue = [];
+var storageSynced = false;
+
+function cleanStorage(all){
+	var total = 0, remove = [];
+	
+	if(!all){
+		chrome.storage.sync.get(null, clean);
+	}else{
+		clean(all);
+	}
+	
+	function clean(all){
+		for(var url in all){
+			total++;
+		}
+		console.log('total');
+		console.log(total);
+		if(total > 500){
+			for(var url in all){
+				if(all[url].enabled === false && m1Top === null){
+					remove.push(url);
+				}
+			}
+			
+			chrome.storage.sync.remove(remove, function(){
+				if(chrome.runtime.lastError){
+					console.log(chrome.runtime.lastError);
+				}
+				
+				console.log('sync storage clean');
+			});
+			
+			if(remove.length == 0){
+				//remove the 250 least recent
+				
+				var sortedByDate = mergeSortByDate(all);
+			}			
+		}
+	}
+
+	setTimeout(cleanStorage, 1.8e+6);
 }
 
-syncStorage();
+function initStorage(){
+	chrome.storage.local.get(null, function(all){
+		console.log(all);
+	});
+	
+	chrome.storage.sync.get(null, function(all){
+		console.log('content in sync after set');
+		console.log(all);
+		
+		cleanStorage(all);
+		
+		if(isEmpty(all)){
+			chrome.storage.local.clear();
+		}
+		
+		chrome.storage.local.set(all, function(){
+			console.log('local done');
+			
+			storageSynced = true;
+		});
+		
+	});
+	
+}
 
+function syncStorage(){
+	console.log('hello extension');
+	console.log('storageChangesQueue in syncStorage');
+	console.log(storageChangesQueue);
+	
+	while(storageChangesQueue.length > 0){
+		storageSynced = false;
+		
+		var changed = storageChangesQueue.pop();
+		
+		for(var url in changed){
+			if(typeof(changed[url].newValue) !== 'undefined'){
+				var newValue = {};
+				newValue[url] = changed[url].newValue;
+				
+				chrome.storage.sync.set(newValue, function(){
+					if(!chrome.runtime.lastError){
+						storageSynced = true;
+					}
+					console.log('sync storage synced');						
+				});
+
+				console.log(newValue);
+			}
+		}
+	}
+	
+	//less than 10 write operations per minute
+	setTimeout(syncStorage, 7000);
+}
+
+initStorage();
+syncStorage();
+console.log('storageSynced after initStorage');
+console.log(storageSynced);
 
 /* * * * chrome events * * * */
 setTimeout(function(){
@@ -36,9 +133,6 @@ chrome.runtime.onSuspendCanceled.addListener(function (){
 });
 
 chrome.runtime.onConnect.addListener(function(port){
-	console.log('connected to port');
-	console.log(port);
-
 	port.onMessage.addListener(function(post) {
 		console.log('in port on message');
 		console.log(post);
@@ -117,6 +211,19 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 
 });
 
+chrome.storage.onChanged.addListener(function(changes, areaName){
+	console.log('changes');
+	console.log(changes);
+	console.log('areaName');
+	console.log(areaName);
+	if(areaName == 'local'){
+		storageSynced = false;
+		storageChangesQueue.unshift(changes);
+	}
+	console.log('storageChangesQueue in onChanged');
+	console.log(storageChangesQueue);
+});
+
 /* * * * libraries * * * */
 function refreshContentScripts(){
 	// Get all windows
@@ -191,7 +298,8 @@ function getSettings(url, callback){
 				enabled : false,
 				m1Top : null,
 				m2Top : null,
-				url : url
+				url : url,
+				time : Date.now()
 			};
 		}
 		
@@ -202,9 +310,21 @@ function getSettings(url, callback){
 }
 
 function getStorage(key, callback){
+	console.log('storageSynced in getStorage');
+	console.log(storageSynced);
 	
-	chrome.storage.local.get(key, function(res){
-		
+	if(storageSynced === true){
+		chrome.storage.sync.get(key, onResult);
+		chrome.storage.sync.getBytesInUse(key, function(bytes){
+			console.log('bytes in use');
+			console.log(bytes);
+		});
+	}else{
+		chrome.storage.local.get(key, onResult);
+	}
+	
+	
+	function onResult(res){
 		if(chrome.runtime.lastError){
 			console.log(chrome.runtime.lastError);
 		}
@@ -218,7 +338,8 @@ function getStorage(key, callback){
 		if(typeof(callback) == 'function'){
 			callback(result);
 		}
-	});
+	}
+	
 }
 
 function setStorage(save, callback){
@@ -244,6 +365,8 @@ function updateSettings(urlKey, changes, callback){
 				settings[key] = changes[key];
 			}
 		}
+		
+		settings['time'] = Date.now();
 		
 		save[urlKey] = settings;
 		
