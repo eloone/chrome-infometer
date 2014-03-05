@@ -82,7 +82,6 @@ Extension.prototype = {
 		}
 
 		if(isEmpty(settings)){
-			this.settings.enabled = false;
 			console.log('unexpected format for settings in init');
 			return;
 		}else{
@@ -135,7 +134,6 @@ Extension.prototype = {
 	
 	attachEvents : function(){
 		var self = this;
-		console.log('self in attachEvents');
 
 		this.detachEvents();
 		
@@ -226,14 +224,16 @@ Extension.prototype = {
 
 		this.settings.m1Top = this.m1.positioned == 'final' ? this.m1.top() : this.settings.m1Top;
 		this.settings.m2Top = this.m2.positioned == 'final' ? this.m2.top() : this.settings.m2Top;
-
-		this.port.postMessage({
-			method : 'updateSettings',
-			data : {
-				m1Top : self.settings.m1Top,
-				m2Top : self.settings.m2Top
-			}
-		});
+		
+		if(this.m1.positioned == 'final' && this.m2.positioned == 'final'){
+			this.port.postMessage({
+				method : 'updateSettings',
+				data : {
+					m1Top : self.settings.m1Top,
+					m2Top : self.settings.m2Top
+				}
+			});
+		}
 		
 		this.heightToView = this.getHeightToView();
 
@@ -418,20 +418,27 @@ function Marker(classes){
 
 Marker.prototype = {
 	eventMoved : new ExtensionEvent('markerMovedAway'),
+	
 	eventMarkerClicked : new ExtensionEvent('markerClicked'),
+	
 	top : function(){
 		return this.node.offsetTop + this.fixedHeight()/2;
 	},
+	
 	screenTop : function(){
 		return this.node.getBoundingClientRect().top + this.fixedHeight()/2;
 	},
+	
 	left : function(){
 		return this.node.offsetLeft;
 	},
+	
 	width : function(){
 		return this.node.offsetWidth;
 	},
+	
 	positioned : 'pending',
+	
 	moveTo : function(y){	
 
 		this.node.style.left = 0 + 'px';
@@ -441,6 +448,7 @@ Marker.prototype = {
 		
 		EventProxy.emit(this.eventMoved);
 	},
+	
 	fixedHeight : function(){
 		if(this.positioned == 'final'){
 			this.height = this.node.offsetHeight;
@@ -448,6 +456,7 @@ Marker.prototype = {
 
 		return this.height;
 	},
+	
 	updatePosition : function(y){
 		if(this.positioned == 'pending'){
 			this.moveTo(y);
