@@ -1,8 +1,44 @@
 var storageChangesQueue = [];
 var storageSynced = false;
 
+function mockStorage(){
+	
+	var all = {};
+	
+	for(var i = 0; i < 495; i ++){
+		var entry = new entry();
+		all[entry.url] = entry;
+	}
+	
+	function entry(){
+		var entry = {
+			enabled : true,
+			m1Top : 5,
+			m2Top : 100,
+			url : randomUrl(),
+			time : randomDate().getTime(),
+			date : randomDate()
+		};
+		
+		return entry;
+	}
+	
+	function randomUrl(){
+		return 'http://'+Math.random().toString(36).substring(7)+'.com'
+	}
+	
+	function randomDate(){
+		var year = 2014;
+		var day = Math.round(Math.random()*30);
+		var month = Math.round(Math.random()*11);
+		
+		return new Date(year, month, day);
+	}
+}
+
+
 function cleanStorage(all){
-	var total = 0, remove = [];
+	var total = 0;
 	
 	if(!all){
 		chrome.storage.sync.get(null, clean);
@@ -14,57 +50,107 @@ function cleanStorage(all){
 		for(var url in all){
 			total++;
 		}
+		
 		console.log('total');
 		console.log(total);
+		
+		//storage capacity can't exceed 512 items
 		if(total > 500){
-			for(var url in all){
-				if(all[url].enabled === false && m1Top === null){
-					remove.push(url);
-				}
-			}
+			//first we remove any entry where the extension is disabled and has never been enabled
+			var remove = removeDisabled(all);
 			
-			chrome.storage.sync.remove(remove, function(){
-				if(chrome.runtime.lastError){
-					console.log(chrome.runtime.lastError);
-				}
-				
-				console.log('sync storage clean');
-			});
-			
+			//if there is nothing to remove we remove the 100 least recent entries
 			if(remove.length == 0){
-				//remove the 250 least recent
-				
-				var sortedByDate = mergeSortByDate(all);
+				removeLeastRecent(all, 100);
 			}			
 		}
 	}
+	
+	//we clean the storage every 1 hour so it does not exceed 500 items
+	setTimeout(cleanStorage, 3.6e+6);
+}
 
-	setTimeout(cleanStorage, 1.8e+6);
+function removeDisabled(all){
+	var remove = [];
+	
+	for(var url in all){
+		if(all[url].enabled === false && all[url].m1Top === null){
+			remove.push(url);
+		}
+	}
+	
+	if(remove.length > 0){
+		removeItems(remove);
+	}
+	
+	return remove;
+}
+
+function removeLeastRecent(all, howMany){
+	//remove the 100 least recent
+	var byDate = {}, times = [];
+	
+	//we put items in an structure where the time is the key
+	for(var url in all){
+		//simple paranoia it should never happen
+		if(typeof all[url]['time'] == 'undefined'){
+			console.log('The key "time" does not exist in removeLeastRecent. Cancelled removeLeastRecent.');
+			return;
+		}
+		
+		var timeMs = all[url]['time'];
+		
+		//each key points to an array in case same time for different tabs /don't forget the write is asynchronous
+		if(typeof byDate[timeMs] != 'undefined'){
+			byDate[timeMs] = [all[url]];
+		}else{
+			byDate[timeMs].push(all[url]);
+		}
+		
+		if(times.indexOf(timeMs) == -1){
+			times.push(timeMs);
+		}					
+	}
+	
+	times.sort();
+	
+	var remove = [];
+	
+	for(var i = 0; i < howMany; i++){
+		for(var j = 0; j < byDate[times[i]].length; j++ ){
+			remove.push(byDate[times[i]][j].url);
+		}
+	}
+	
+	removeItems(remove);
+}
+
+function removeItems(keysArray){
+	chrome.storage.sync.remove(keysArray, function(){
+		if(chrome.runtime.lastError){
+			console.log(chrome.runtime.lastError);
+		}
+		
+		console.log('removed items');
+	});
 }
 
 function initStorage(){
-	chrome.storage.local.get(null, function(all){
-		console.log(all);
-	});
-	
+
 	chrome.storage.sync.get(null, function(all){
-		console.log('content in sync after set');
-		console.log(all);
-		
+	
 		cleanStorage(all);
 		
 		if(isEmpty(all)){
 			chrome.storage.local.clear();
 		}
 		
+		//we transfer synced content to local storage
 		chrome.storage.local.set(all, function(){
-			console.log('local done');
-			
 			storageSynced = true;
 		});
 		
-	});
-	
+	});	
 }
 
 function syncStorage(){
@@ -85,7 +171,10 @@ function syncStorage(){
 				chrome.storage.sync.set(newValue, function(){
 					if(!chrome.runtime.lastError){
 						storageSynced = true;
+					}else{
+						storageSynced = false;
 					}
+					
 					console.log('sync storage synced');						
 				});
 
@@ -94,7 +183,8 @@ function syncStorage(){
 		}
 	}
 	
-	//less than 10 write operations per minute
+	//write to synced storage is controlled by extension here
+	//this is ~8 write operations per minute /storage write limit is 10 op/min
 	setTimeout(syncStorage, 7000);
 }
 
@@ -299,7 +389,8 @@ function getSettings(url, callback){
 				m1Top : null,
 				m2Top : null,
 				url : url,
-				time : Date.now()
+				time : Date.now(),
+				date : new Date()
 			};
 		}
 		
@@ -367,6 +458,7 @@ function updateSettings(urlKey, changes, callback){
 		}
 		
 		settings['time'] = Date.now();
+		settings['date'] = new Date();
 		
 		save[urlKey] = settings;
 		
