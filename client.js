@@ -31,6 +31,8 @@ console.log(request);
 		if(request.method == 'updateStatus'){
 			if(document.readyState == 'complete'){
 				if(getCurrentExtension()){
+					console.log(request.settings.toString());
+					console.log(chromeInfometer.settings);
 					if(!equals(request.settings, chromeInfometer.settings)){
 
 						chromeInfometer.init(request.settings);

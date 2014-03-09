@@ -1,113 +1,9 @@
-var storageChangesQueue = [];
-var storageSynced = false;
-
-function cleanStorage(all){
-	var total = 0, remove = [];
-	
-	if(!all){
-		chrome.storage.sync.get(null, clean);
-	}else{
-		clean(all);
-	}
-	
-	function clean(all){
-		for(var url in all){
-			total++;
-		}
-		console.log('total');
-		console.log(total);
-		if(total > 500){
-			for(var url in all){
-				if(all[url].enabled === false && m1Top === null){
-					remove.push(url);
-				}
-			}
-			
-			chrome.storage.sync.remove(remove, function(){
-				if(chrome.runtime.lastError){
-					console.log(chrome.runtime.lastError);
-				}
-				
-				console.log('sync storage clean');
-			});
-			
-			if(remove.length == 0){
-				//remove the 250 least recent
-				
-				var sortedByDate = mergeSortByDate(all);
-			}			
-		}
-	}
-
-	setTimeout(cleanStorage, 1.8e+6);
-}
-
-function initStorage(){
-	chrome.storage.local.get(null, function(all){
-		console.log(all);
-	});
-	
-	chrome.storage.sync.get(null, function(all){
-		console.log('content in sync after set');
-		console.log(all);
-		
-		cleanStorage(all);
-		
-		if(isEmpty(all)){
-			chrome.storage.local.clear();
-		}
-		
-		chrome.storage.local.set(all, function(){
-			console.log('local done');
-			
-			storageSynced = true;
-		});
-		
-	});
-	
-}
-
-function syncStorage(){
-	console.log('hello extension');
-	console.log('storageChangesQueue in syncStorage');
-	console.log(storageChangesQueue);
-	
-	while(storageChangesQueue.length > 0){
-		storageSynced = false;
-		
-		var changed = storageChangesQueue.pop();
-		
-		for(var url in changed){
-			if(typeof(changed[url].newValue) !== 'undefined'){
-				var newValue = {};
-				newValue[url] = changed[url].newValue;
-				
-				chrome.storage.sync.set(newValue, function(){
-					if(!chrome.runtime.lastError){
-						storageSynced = true;
-					}
-					console.log('sync storage synced');						
-				});
-
-				console.log(newValue);
-			}
-		}
-	}
-	
-	//less than 10 write operations per minute
-	setTimeout(syncStorage, 7000);
-}
-
 initStorage();
 syncStorage();
 console.log('storageSynced after initStorage');
 console.log(storageSynced);
 
 /* * * * chrome events * * * */
-setTimeout(function(){
-		console.log('hello me');
-	}, 1000);
-
 chrome.runtime.onInstalled.addListener(function(info){
 	console.log('installed or enabled');
 	refreshContentScripts();
@@ -136,6 +32,9 @@ chrome.runtime.onConnect.addListener(function(port){
 	port.onMessage.addListener(function(post) {
 		console.log('in port on message');
 		console.log(post);
+		if(typeof port.sender.tab == 'undefined'){
+			return;
+		}
 		
 		var urlKey = port.sender.tab.url.replace(/([^#]*)#.*/, '$1');
 	
@@ -299,7 +198,8 @@ function getSettings(url, callback){
 				m1Top : null,
 				m2Top : null,
 				url : url,
-				time : Date.now()
+				time : Date.now(),
+				date : new Date().toString()
 			};
 		}
 		
@@ -367,6 +267,7 @@ function updateSettings(urlKey, changes, callback){
 		}
 		
 		settings['time'] = Date.now();
+		settings['date'] = new Date().toString();
 		
 		save[urlKey] = settings;
 		
@@ -385,7 +286,6 @@ function updateIcon(){
 	  {currentWindow: true, active : true, windowType : 'normal'},
 	  function(tabArray){
 		var currentTab = tabArray[0];
-		console.log(currentTab);
 		//don't change anything if there is no result => the current tab must be a devtools tab
 		if(typeof currentTab == 'undefined'){		
 			return;
