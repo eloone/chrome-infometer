@@ -31,15 +31,15 @@ console.log(request);
 		if(request.method == 'updateStatus'){
 			if(document.readyState == 'complete'){
 				if(getCurrentExtension()){
-					console.log(request.settings.toString());
-					console.log(chromeInfometer.settings);
-					if(!equals(request.settings, chromeInfometer.settings)){
+
+					if(!equals(request.settings, chromeInfometer.settings, {filter : ['date', 'time']})){
 
 						chromeInfometer.init(request.settings);
 
 						port.postMessage({data : 'extension is updated'});
 
 					}else{
+						console.log('no changes in settings');
 						port.postMessage({data : 'extension is idle'});
 					}
 					
@@ -83,6 +83,7 @@ Extension.prototype = {
 			return;
 		}
 
+		//should never happen
 		if(isEmpty(settings)){
 			console.log('unexpected format for settings in init');
 			return;
@@ -470,8 +471,26 @@ Marker.prototype = {
 };
 
 // performs shallow equal between 2 objects
-function equals(o1, o2){
-  return JSON.stringify(o1) == JSON.stringify(o2);
+function equals(o1, o2, options){
+	var equal = false;
+
+	for(var key in o1){
+		if(options && options.filter){
+			if(options.filter.indexOf(key) > -1){
+				continue;
+			}
+		}
+
+		if(o1[key] == o2[key]){
+			equal = true;
+		}else{
+			equal = false;
+			break;
+		}
+		
+	}
+
+  return equal;
 }
 
 function isEmpty(obj){

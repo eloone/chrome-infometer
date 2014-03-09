@@ -11,7 +11,7 @@
     "https://*/*"
   ],
   "background": {
-    "page": "background.html",
+    "scripts": ["storage.js", "background.js"],
     "persistent": false
   },
   "content_scripts" : [

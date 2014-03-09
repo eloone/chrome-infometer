@@ -23,6 +23,8 @@ function cleanStorage(all){
 
 function initStorage(){
 
+	chrome.storage.sync.clear();
+
 	chrome.storage.sync.get(null, function(all){
 	
 		cleanStorage(all);

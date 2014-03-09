@@ -75,6 +75,7 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 		var port = chrome.tabs.connect(tab.id);
 
 		getSettings(url, function(settings){
+			console.log(console.log(JSON.stringify(settings)));
 			port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
 		});
 
@@ -191,15 +192,15 @@ function injectDisableJsIntoTab(tab) {
 function getSettings(url, callback){
 	
 	getStorage(url, function(settings){
-
+		//it gets a date once it is stored only
+		//nothing is stored until the icon is clicked 
+		//so if the record is empty it has the following disabled settings
 		if(isEmpty(settings)){
 			settings = {
 				enabled : false,
 				m1Top : null,
 				m2Top : null,
-				url : url,
-				time : Date.now(),
-				date : new Date().toString()
+				url : url
 			};
 		}
 		
@@ -215,10 +216,6 @@ function getStorage(key, callback){
 	
 	if(storageSynced === true){
 		chrome.storage.sync.get(key, onResult);
-		chrome.storage.sync.getBytesInUse(key, function(bytes){
-			console.log('bytes in use');
-			console.log(bytes);
-		});
 	}else{
 		chrome.storage.local.get(key, onResult);
 	}
@@ -268,7 +265,7 @@ function updateSettings(urlKey, changes, callback){
 		
 		settings['time'] = Date.now();
 		settings['date'] = new Date().toString();
-		
+
 		save[urlKey] = settings;
 		
 		setStorage(save, function(){
@@ -295,8 +292,6 @@ function updateIcon(){
 		var id = currentTab.id;
 		var urlKey = currentTab.url.replace(/([^#]*)#.*/, '$1');
 		
-		console.log(currentTab);
-
 		getSettings(urlKey, function(settings){
 			if(settings.enabled === true){
 				setEnabled();
