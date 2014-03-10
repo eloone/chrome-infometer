@@ -1,4 +1,4 @@
-/* Main script for the client that is injected in every tab visited once the extension is enabled */
+/* Main content script for the client that is injected in every tab visited once the extension is enabled */
 
 /* * * * activation * * * */
 
