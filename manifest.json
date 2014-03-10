@@ -1,7 +1,7 @@
 {
   "name": "Infometer",
   "description": "Infometer helps you measure how much you have read of an online content.",
-  "version": "2.0",
+  "version": "0.0.1",
   "permissions": [
     "activeTab",
     "storage",
@@ -11,15 +11,15 @@
     "https://*/*"
   ],
   "background": {
-    "scripts": ["storage.js", "background.js"],
+    "scripts": ["back/storage.js", "back/main.js"],
     "persistent": false
   },
   "content_scripts" : [
   {
 	  	"matches" : ["http://*/*","https://*/*"],
-	  	"css": ["client.css"],	  	
+	  	"css": ["front/main.css"],	  	
 	  	"js" : [
-	  			"client.js"
+	  			"front/main.js"
 	  			],
       "run_at" : "document_start" 	
   	}

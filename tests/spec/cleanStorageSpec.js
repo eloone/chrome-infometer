@@ -28,12 +28,11 @@ describe("cleanStorage", function() {
   });
 
   it("should clean the disabled records when there are more than 500 records", function() {
-	 var disabledRecords = mockStorage(122, 'disabled', 'inactive');
-	 var enabledRecords = mockStorage(194, 'enabled', 'active');
-	 var activeRecords = mockStorage(194, 'disabled', 'active');
+	 var disabledRecords = mockStorage(122, 'disabled', 'active');
+	 var enabledRecords = mockStorage(388, 'enabled', 'active');
 
-	 var all = merge(disabledRecords, enabledRecords, activeRecords);
-	 var disabledAndInactive = count(all, {enabled : false, m1Top : null});
+	 var all = merge(disabledRecords, enabledRecords);
+	 var disabledAndInactive = count(all, {enabled : false});
 	 var remove = toClean(all);
 
 	 expect(count(all)).toEqual(510);
@@ -41,7 +40,7 @@ describe("cleanStorage", function() {
 	 expect(remove.length).toEqual(disabledAndInactive);
 
 	 var cleanRecords = mockRemoveItems(remove, all);
-	 disabledAndInactive = count(all, {enabled : false, m1Top : null});
+	 disabledAndInactive = count(all, {enabled : false});
 
 	 expect(count(cleanRecords)).toEqual(388);
 	 expect(count(disabledAndInactive)).toEqual(0);
@@ -50,7 +49,7 @@ describe("cleanStorage", function() {
 
   it("should clean 100 records when there are more than 500 records and less than 100 disabled records", function() {
 	 var enabledRecords = mockStorage(495, 'enabled', 'active');
-	 var disabledRecords = mockStorage(15, 'disabled', 'inactive');
+	 var disabledRecords = mockStorage(15, 'disabled', 'active');
 	 var all = merge(enabledRecords, disabledRecords);
 	 var disabledToRemove = removeDisabled(all);
 	 var leastRecentToRemove = removeLeastRecent(all, {howMany : 100 - disabledToRemove.length, excludedKeys : disabledToRemove});
@@ -62,7 +61,7 @@ describe("cleanStorage", function() {
 	 expect(remove.length).toEqual(100);
 
 	 var cleanRecords = mockRemoveItems(remove, all);
-	 var disabledAndInactive = count(all, {enabled : false, m1Top : null});
+	 var disabledAndInactive = count(all, {enabled : false});
 
 	 expect(count(cleanRecords)).toEqual(410);
 	 expect(count(disabledAndInactive)).toEqual(0);
@@ -77,7 +76,7 @@ describe("cleanStorage", function() {
 	 expect(remove.length).not.toBeLessThan(100);
 
 	 var cleanRecords = mockRemoveItems(remove, all);
-	 var disabledAndInactive = count(all, {enabled : false, m1Top : null});
+	 var disabledAndInactive = count(all, {enabled : false});
 
 	 expect(count(cleanRecords)).not.toBeGreaterThan(410);
 	 expect(count(disabledAndInactive)).toEqual(0);

@@ -4,7 +4,18 @@ function mockStorage(quantity, isenabled, isactivated){
 	
 	for(var i = 0; i < quantity; i ++){
 		var entry = new Entry();
-		all[entry.url] = entry;
+	
+		if(typeof all[entry.url] == 'undefined'){
+			all[entry.url] = entry;
+		}else{
+			var entry2 = new Entry();
+
+			while(typeof all[entry2.url] != 'undefined'){
+				entry2 = new Entry();
+			}
+
+			all[entry2.url] = entry2;
+		}
 	}
 	
 	function Entry(){
