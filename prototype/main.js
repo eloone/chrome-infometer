@@ -2,8 +2,8 @@ $(document).ready(function(){
 
 	var markerSrc = supportsSVG() ? 'marker.svg' : 'marker.png';
 	var viewportHeight = $(window).height();
-	var m1 = new Marker($('<img src="'+markerSrc+'" class="marker marker1"/>'));
-	var m2 = new Marker($('<img src="'+markerSrc+'" class="marker marker2"/>'));
+	var m1 = new Marker($('<img src="'+markerSrc+'" class="chrome-extension-infometer-marker marker1"/>'));
+	var m2 = new Marker($('<img src="'+markerSrc+'" class="chrome-extension-infometer-marker marker2"/>'));
 	var heightToView = getHeightToView(m1, m2);
 	
 	caculateProgress();
@@ -41,7 +41,7 @@ $(document).ready(function(){
 
 			var progress = (viewedHeight/heightToView)*100;
 		
-			$('.progress').css('width', progress+'%');
+			$('.chrome-extension-infometer-progress').css('width', progress+'%');
 		}
 	}
 
@@ -62,7 +62,7 @@ function Marker(jqueryNode){
 				$this.node.get(0).src = 'markerdashed.svg';
 			}
 
-			tooltip = $('<p class="tooltip">Please click on the end position you wish for this marker.</p>');
+			tooltip = $('<p class="chrome-extension-infometer-tooltip">Please click on the end position you wish for this marker.</p>');
 	
 			$('body').append(tooltip);
 			
