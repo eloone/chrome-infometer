@@ -160,7 +160,7 @@ Extension.prototype = {
 		
 		EventProxy.listen('resize', function(){self.onWindowResize()});
 	
-		EventProxy.listen('overlayClicked', function(e){self.onOverlayClick(e)});
+		EventProxy.listen('overlayClicked', function(e){self.onOverlayClicked(e)});
 		
 		EventProxy.listen('markerMovedAway', function(){self.onMarkerMoved()});
 		
@@ -176,7 +176,7 @@ Extension.prototype = {
 		
 		EventProxy.unlisten('resize', function(){self.onWindowResize()});
 	
-		EventProxy.unlisten('overlayClicked', function(e){self.onOverlayClick(e)});
+		EventProxy.unlisten('overlayClicked', function(e){self.onOverlayClicked(e)});
 		
 		EventProxy.unlisten('markerMovedAway', function(){self.onMarkerMoved()});
 		
@@ -219,7 +219,7 @@ Extension.prototype = {
 		this.calculateProgress();
 	},
 	
-	onOverlayClick : function(e){
+	onOverlayClicked : function(e){
 		this.m1.updatePosition(e.pageY);
 		this.m2.updatePosition(e.pageY);
 	},
@@ -271,11 +271,14 @@ function Header(){
 	var progress = document.createElement('span'),
 		header = document.createElement('div'),
 		tooltip = document.createElement('p'),
-		eventHeaderClicked = new ExtensionEvent('headerClicked');
+		eventHeaderClicked = new ExtensionEvent('headerClicked'),
+		infometerImg = chrome.extension.getURL('images/infometer.png');
 	
 	progress.className = 'chrome-extension-infometer-progress';
 	header.className = 'chrome-extension-infometer chrome-extension-infometer-header';
 	tooltip.className = 'chrome-extension-infometer-tooltip';
+	
+	header.style.background = '#ddd url("'+infometerImg+'") no-repeat right center';
 	
 	tooltip.innerHTML = 'Please click on the end position you wish for this marker.';
 	header.appendChild(progress);
