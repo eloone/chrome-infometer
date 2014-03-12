@@ -1,5 +1,11 @@
 /* Main background script that communicates with the client and enables the extension */
 
+//tracks the state of the connection to the content script {tabId : true} per tab if the tab's content script connected
+//otherwise the id of the tab is not defined in the object
+//allows to track which tabs need to be reloaded to make the extension work otherwise there is a port disconnection error
+//this happens when chrome doesn't manage to inject a content script in a tab, it happens
+var TabsConnected = {};
+
 /* * * * storage daemons * * * */
 initStorage();
 syncStorage();
@@ -9,6 +15,7 @@ syncStorage();
 //called when the extension is first installed or the runtime is reloaded
 chrome.runtime.onInstalled.addListener(function(info){
 	refreshContentScripts();
+	updateIcon();
 });
 
 //called when the extension is enabled
@@ -16,11 +23,16 @@ chrome.management.onEnabled.addListener(function(info){
 	//enabling/disabling the extension doesn't reload the runtime which causes port disconnections
 	//so we force runtime reload when enabling the extension it triggers the onInstalled hook
 	chrome.runtime.reload();
-	refreshContentScripts();
 });
 
 //called when the client connects to the extension
 chrome.runtime.onConnect.addListener(function(port){
+	
+	//as soons as a content script connects we trace the connection status here
+	if(port.sender.tab){
+		TabsConnected[port.sender.tab.id] = true;
+	}
+
 	port.onMessage.addListener(function(post) {
 		
 		if(typeof port.sender.tab == 'undefined'){
@@ -80,6 +92,12 @@ chrome.browserAction.onClicked.addListener(function(tab) {
  
  var urlKey = tab.url.replace(/([^#]*)#.*/, '$1');
  var port = chrome.tabs.connect(tab.id);
+ var isHttp = urlKey.match(/^https?/);
+ 
+ if(!isHttp){
+	 setDisabled();
+	 return;
+ }
 
  getSettings(urlKey, init);
  
@@ -199,7 +217,7 @@ function getStorage(key, callback){
 
 			//should never happen if the content scripts are refreshed every enable/install
 			if(msg == 'Attempting to use a disconnected port object'){
-				setError('reload');
+				updateIcon({error : 'reload'});
 			}
 		}
 	}
@@ -224,14 +242,13 @@ function setStorage(save, callback){
 		catch(e){
 			//if the content script is not reloaded when the extension is updated/reloaded
 			//storage callbacks provoke a disconnected port error
-			//since I fixed this by forcing the re-run of runtime and content scripts it should not happen 
-			//but as the problem is undocumented I prefer leaving this / same for getStorage
+			//this can happen when chrome doesn't manage to inject the content script it happens
 			console.error(e);
 
 			var msg = e.message;
 			//should never happen if the content scripts are refreshed every enable/install
 			if(msg == 'Attempting to use a disconnected port object'){
-				setError('reload');
+				updateIcon({error : 'reload'});
 			}
 		}
 	});
@@ -242,7 +259,7 @@ function setStorage(save, callback){
 //called at every change of tab reloaded or activated
 //it just updates the icon based on the current tab returned by the tab query
 //the icon updates are independant from the client script
-function updateIcon(){
+function updateIcon(params){
 
 	chrome.tabs.query(
 	  {currentWindow: true, active : true, windowType : 'normal'},
@@ -256,6 +273,20 @@ function updateIcon(){
 		//otherwise update the icon
 		var id = currentTab.id;
 		var urlKey = currentTab.url.replace(/([^#]*)#.*/, '$1');
+		var isHttp = urlKey.match(/^https?/);
+		
+		//case when port disconnected from storage fcts
+		if(params && params.error){
+			delete TabsConnected[id];
+			setError(params.error);
+			return;
+		}
+		
+		//case when has tab exists but never connected
+		if(typeof TabsConnected[id] == 'undefined' && isHttp){
+			setError('reload');
+			return;
+		}
 		
 		getSettings(urlKey, function(settings){
 			if(settings.enabled === true){
@@ -278,7 +309,7 @@ function setError(msg){
 
 	switch(msg){
 		case 'reload':
-			title = 'Please reload this tab to activate Infometer';
+			title = 'Please reload this tab to use Infometer';
 			break;
 		default :
 			title = 'An error occured'
@@ -330,12 +361,12 @@ function refreshContentScripts(){
 function injectJsIntoTab(tab) {
 	chrome.manifest = chrome.app.getDetails();
     var scripts = chrome.manifest.content_scripts[0].js;
-    var s = scripts.length;
-
+    var s = scripts.length; 
+    
     for( var i = 0; i < s; i++ ) {
         chrome.tabs.executeScript(tab.id, {
             file: scripts[i]
-        }, function(){
+        }, function(){	
         	if(i == s){
         		var port = chrome.tabs.connect(tab.id);
         		port.postMessage({method : 'install', from : 'injector'});
