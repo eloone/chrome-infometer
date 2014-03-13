@@ -1,5 +1,6 @@
 /* Main background script that communicates with the client and enables the extension */
 
+
 //tracks the state of the connection to the content script {tabId : true} per tab if the tab's content script connected
 //otherwise the id of the tab is not defined in the object
 //allows to track which tabs need to be reloaded to make the extension work otherwise there is a port disconnection error
@@ -62,11 +63,13 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
 		
 		getSettings(url, function(settings){
+			console.log(settings);
 			var port = chrome.tabs.connect(tab.id);
-			
+			console.log('test1');
 			port.postMessage({method : 'install', settings : settings, from : 'tab updated'});
-			
+			console.log('test2');
 			updateIcon();
+			console.log('test3');
 		});
 	}
 
@@ -93,10 +96,10 @@ chrome.browserAction.onClicked.addListener(function(tab) {
  var urlKey = tab.url.replace(/([^#]*)#.*/, '$1');
  var port = chrome.tabs.connect(tab.id);
  var isHttp = urlKey.match(/^https?/);
- 
- if(!isHttp){
-	 setDisabled();
-	 return;
+ var isBlocked = urlKey.match(/chrome\.google\.com\/webstore/);
+
+ if(!isHttp || isBlocked){
+ 	return;
  }
 
  getSettings(urlKey, init);
@@ -217,7 +220,7 @@ function getStorage(key, callback){
 
 			//should never happen if the content scripts are refreshed every enable/install
 			if(msg == 'Attempting to use a disconnected port object'){
-				updateIcon({error : 'reload'});
+				updateIcon({error : 'disconnected'});
 			}
 		}
 	}
@@ -248,7 +251,7 @@ function setStorage(save, callback){
 			var msg = e.message;
 			//should never happen if the content scripts are refreshed every enable/install
 			if(msg == 'Attempting to use a disconnected port object'){
-				updateIcon({error : 'reload'});
+				updateIcon({error : 'disconnected'});
 			}
 		}
 	});
@@ -274,20 +277,31 @@ function updateIcon(params){
 		var id = currentTab.id;
 		var urlKey = currentTab.url.replace(/([^#]*)#.*/, '$1');
 		var isHttp = urlKey.match(/^https?/);
+		var isBlocked = urlKey.match(/chrome\.google\.com\/webstore/);
 		
+		//content scripts are blocked on the webstore
+		if(!isHttp || isBlocked){
+			setError('blocked');
+			return;
+		}
+
 		//case when port disconnected from storage fcts
 		if(params && params.error){
 			delete TabsConnected[id];
-			setError(params.error);
+
+			if(params.error == 'disconnected'){
+				setError('reload');			
+			}
+
 			return;
 		}
-		
+
 		//case when has tab exists but never connected
-		if(typeof TabsConnected[id] == 'undefined' && isHttp){
+		if(typeof TabsConnected[id] == 'undefined'){
 			setError('reload');
 			return;
 		}
-		
+
 		getSettings(urlKey, function(settings){
 			if(settings.enabled === true){
 				setEnabled();
@@ -310,6 +324,10 @@ function setError(msg){
 	switch(msg){
 		case 'reload':
 			title = 'Please reload this tab to use Infometer';
+			break;
+		case 'blocked':
+			chrome.browserAction.setBadgeText({text : 'OFF'});
+			title = "Sorry, Infometer can't work on this page";
 			break;
 		default :
 			title = 'An error occured'
