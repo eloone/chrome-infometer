@@ -1,7 +1,7 @@
 /* Main content script for the client that is injected in every tab visited once the extension is enabled */
 
 /* * * * activation * * * */
-console.log('MAINJS');
+
 //initialization at each page load or when the script is run from extension at enabled/installed events
 
 //the EventProxy allows the extension to manage its own events 
