@@ -1,5 +1,5 @@
 /* Main content script for the client that is injected in every tab visited once the extension is enabled */
-
+console.log('MAIN');
 /* * * * activation * * * */
 
 //initialization at each page load or when the script is run from extension at enabled/installed events

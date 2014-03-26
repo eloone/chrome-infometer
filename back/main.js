@@ -1,7 +1,7 @@
 /* Main background script that communicates with the client and enables the extension */
 
 
-//tracks the state of the connection to the content script {tabId : true} per tab if the tab's content script connected
+//tracks the state of the connection to the content script {tabId : true | 'pending'} per tab if the tab's content script connected
 //otherwise the id of the tab is not defined in the object
 //allows to track which tabs need to be reloaded to make the extension work otherwise there is a port disconnection error
 //this happens when chrome doesn't manage to inject a content script in a tab, it happens
@@ -28,10 +28,10 @@ chrome.management.onEnabled.addListener(function(info){
 
 //called when the client connects to the extension
 chrome.runtime.onConnect.addListener(function(port){
-	
 	//as soons as a content script connects we trace the connection status here
 	if(port.sender.tab){
 		TabsConnected[port.sender.tab.id] = true;
+		updateIcon();
 	}
 
 	port.onMessage.addListener(function(post) {
@@ -59,17 +59,15 @@ chrome.runtime.onConnect.addListener(function(port){
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
 
 	if(changeInfo.status == 'complete'){
-		
+		//if tab just opened we set the connection status to pending until client script connects
+		TabsConnected[tab.id] = 'pending';
+
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
 		
 		getSettings(url, function(settings){
-			console.log(settings);
 			var port = chrome.tabs.connect(tab.id);
-			console.log('test1');
 			port.postMessage({method : 'install', settings : settings, from : 'tab updated'});
-			console.log('test2');
 			updateIcon();
-			console.log('test3');
 		});
 	}
 
@@ -82,11 +80,15 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
 		var port = chrome.tabs.connect(tab.id);
 
+		//if tab just opened we set the connection status to pending until client script connects
+		TabsConnected[tab.id] = 'pending';
+
 		getSettings(url, function(settings){
 			port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
 		});
 
 		updateIcon();
+		
 	});
 });
 
@@ -97,6 +99,11 @@ chrome.browserAction.onClicked.addListener(function(tab) {
  var port = chrome.tabs.connect(tab.id);
  var isHttp = urlKey.match(/^https?/);
  var isBlocked = urlKey.match(/chrome\.google\.com\/webstore/);
+
+ //if it is still pending it means it never connected
+ if(TabsConnected[tab.id] == 'pending'){
+ 	delete TabsConnected[tab.id];
+ }
 
  if(!isHttp || isBlocked){
  	return;
@@ -219,6 +226,7 @@ function getStorage(key, callback){
 			var msg = e.message;
 
 			//should never happen if the content scripts are refreshed every enable/install
+			//but sometimes it happens
 			if(msg == 'Attempting to use a disconnected port object'){
 				updateIcon({error : 'disconnected'});
 			}
@@ -250,6 +258,7 @@ function setStorage(save, callback){
 
 			var msg = e.message;
 			//should never happen if the content scripts are refreshed every enable/install
+			//but sometimes it happens
 			if(msg == 'Attempting to use a disconnected port object'){
 				updateIcon({error : 'disconnected'});
 			}
@@ -296,9 +305,14 @@ function updateIcon(params){
 			return;
 		}
 
-		//case when has tab exists but never connected
+		//case when tab exists but never connected
 		if(typeof TabsConnected[id] == 'undefined'){
 			setError('reload');
+			return;
+		}
+
+		if(TabsConnected[id] == 'pending'){
+			setDisabled();
 			return;
 		}
 
@@ -327,10 +341,10 @@ function setError(msg){
 			break;
 		case 'blocked':
 			chrome.browserAction.setBadgeText({text : 'OFF'});
-			title = "Sorry, Infometer can't work on this page";
+			title = "Infometer can't work on this type of page";
 			break;
 		default :
-			title = 'An error occured'
+			title = 'An error occured';
 			break;
 	}
 
