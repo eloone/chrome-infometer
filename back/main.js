@@ -201,7 +201,6 @@ function getStorage(key, callback){
 		chrome.storage.local.get(key, onResult);
 	}
 	
-	
 	function onResult(res){
 		try{
 			if(chrome.runtime.lastError){				
@@ -220,16 +219,7 @@ function getStorage(key, callback){
 			}
 		}
 		catch(e){
-
-			console.error(e);
-
-			var msg = e.message;
-
-			//should never happen if the content scripts are refreshed every enable/install
-			//but sometimes it happens
-			if(msg == 'Attempting to use a disconnected port object'){
-				updateIcon({error : 'disconnected'});
-			}
+			onStorageError(e);
 		}
 	}
 	
@@ -251,19 +241,23 @@ function setStorage(save, callback){
 			}
 		}
 		catch(e){
-			//if the content script is not reloaded when the extension is updated/reloaded
-			//storage callbacks provoke a disconnected port error
-			//this can happen when chrome doesn't manage to inject the content script it happens
-			console.error(e);
-
-			var msg = e.message;
-			//should never happen if the content scripts are refreshed every enable/install
-			//but sometimes it happens
-			if(msg == 'Attempting to use a disconnected port object'){
-				updateIcon({error : 'disconnected'});
-			}
+			onStorageError(e);
 		}
 	});
+}
+
+function onStorageError(e){
+	//if the content script is not reloaded when the extension is updated/reloaded
+	//storage callbacks provoke a disconnected port error
+	//this can happen when chrome doesn't manage to inject the content script it happens
+	console.error(e);
+
+	var msg = e.message;
+	//should never happen if the content scripts are refreshed every enable/install
+	//but sometimes it happens
+	if(msg == 'Attempting to use a disconnected port object'){
+		updateIcon({error : 'disconnected'});
+	}
 }
 
 /* * * * icon updates * * * */
