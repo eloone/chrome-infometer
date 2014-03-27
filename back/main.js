@@ -307,7 +307,6 @@ function updateIcon(params){
 
 		if(TabsConnected[id] == 'pending'){
 			setDisabled();
-			return;
 		}
 
 		getSettings(urlKey, function(settings){
@@ -335,7 +334,7 @@ function setError(msg){
 			break;
 		case 'blocked':
 			chrome.browserAction.setBadgeText({text : 'OFF'});
-			title = "Infometer can't work on this type of page";
+			title = "Infometer doesn't work on this type of page";
 			break;
 		default :
 			title = 'An error occured';

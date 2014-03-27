@@ -1,7 +1,7 @@
 {
   "name": "Infometer",
-  "description": "Infometer helps you measure how much you have read of an online content.",
-  "version": "0.0.1",
+  "description": "Infometer helps you measure how much of a web page you have read.",
+  "version": "1.0.0",
   "permissions": [
     "activeTab",
     "storage",
