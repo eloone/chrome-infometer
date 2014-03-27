@@ -60,7 +60,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
 
 	if(changeInfo.status == 'complete'){
 		//if tab just opened we set the connection status to pending until client script connects
-		TabsConnected[tab.id] = 'pending';
+		TabsConnected[tab.id] = TabsConnected[tab.id] || 'pending';
 
 		var url = tab.url.replace(/([^#]*)#.*/, '$1');
 		
@@ -81,7 +81,7 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 		var port = chrome.tabs.connect(tab.id);
 
 		//if tab just opened we set the connection status to pending until client script connects
-		TabsConnected[tab.id] = 'pending';
+		TabsConnected[tab.id] = TabsConnected[tab.id] || 'pending';
 
 		getSettings(url, function(settings){
 			port.postMessage({method: "updateStatus", settings : settings, from : 'tab activated'});
