@@ -17,14 +17,18 @@ syncStorage();
 chrome.runtime.onInstalled.addListener(function(info){
 	refreshContentScripts();
 	updateIcon();
+	_gaq.push(['_trackEvent', 'activated', 'extension_installed']);
 });
 
 //called when the extension is enabled and at chrome updates
 chrome.management.onEnabled.addListener(function(info){
 	//enabling/disabling the extension doesn't reload the runtime which causes port disconnections
 	//so we force runtime reload when enabling the extension it triggers the onInstalled hook
-	//for now off because it does not behave ok when published
+	//use only in dev mode
 	//chrome.runtime.reload();
+	refreshContentScripts();
+	updateIcon();
+	_gaq.push(['_trackEvent', 'activated', 'extension_enabled']);
 });
 
 //called when the client connects to the extension
@@ -100,6 +104,8 @@ chrome.browserAction.onClicked.addListener(function(tab) {
  var port = chrome.tabs.connect(tab.id);
  var isHttp = urlKey.match(/^https?/);
  var isBlocked = urlKey.match(/chrome\.google\.com\/webstore/);
+
+_gaq.push(['_trackEvent', 'activated', 'icon_clicked', urlKey]);
 
  //if it is still pending it means it never connected
  if(TabsConnected[tab.id] == 'pending'){
@@ -206,6 +212,7 @@ function getStorage(key, callback){
 		try{
 			if(chrome.runtime.lastError){				
 		 		console.log('error in setStorage getStorage');
+		 		_gaq.push(['_trackEvent', 'errors', 'getStorage', chrome.runtime.lastError.message]);
 				console.error(chrome.runtime.lastError);
 			}
 			//if nothing res = {}
@@ -233,6 +240,7 @@ function setStorage(save, callback){
 		try{
 			if(chrome.runtime.lastError){
 				console.log('error in setStorage');
+				_gaq.push(['_trackEvent', 'errors', 'setStorage', chrome.runtime.lastError.message]);
 		 		console.error(chrome.runtime.lastError);
 		 		return;
 		 	}
@@ -252,7 +260,9 @@ function onStorageError(e){
 	//storage callbacks provoke a disconnected port error
 	//this can happen when chrome doesn't manage to inject the content script it happens
 	console.error(e);
-
+	
+	_gaq.push(['_trackEvent', 'errors', 'onStorageError', e.message]);
+	
 	var msg = e.message;
 	//should never happen if the content scripts are refreshed every enable/install
 	//but sometimes it happens
@@ -285,6 +295,8 @@ function updateIcon(params){
 		
 		//content scripts are blocked on the webstore
 		if(!isHttp || isBlocked){
+			_gaq.push(['_trackEvent', 'errors', 'blocked', urlKey]);
+
 			setError('blocked');
 			return;
 		}
@@ -294,6 +306,7 @@ function updateIcon(params){
 			delete TabsConnected[id];
 
 			if(params.error == 'disconnected'){
+				_gaq.push(['_trackEvent', 'errors', 'disconnected', urlKey]);
 				setError('reload');			
 			}
 
@@ -302,6 +315,7 @@ function updateIcon(params){
 
 		//case when tab exists but never connected
 		if(typeof TabsConnected[id] == 'undefined'){
+			_gaq.push(['_trackEvent', 'errors', 'tabs_connected_undefined', urlKey]);
 			setError('reload');
 			return;
 		}

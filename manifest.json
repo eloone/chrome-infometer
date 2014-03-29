@@ -1,7 +1,7 @@
 {
   "name": "Infometer",
   "description": "Infometer helps you measure how much of a web page you have read.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "permissions": [
     "activeTab",
     "storage",
@@ -11,7 +11,7 @@
     "https://*/*"
   ],
   "background": {
-    "scripts": ["back/storage.js", "back/main.js"],
+    "scripts": ["back/ga.js","back/storage.js", "back/main.js"],
     "persistent": false
   },
   "content_scripts" : [
@@ -37,6 +37,6 @@
            "48": "images/icon48.png",
           "128": "images/icon128.png" },
 
-  "content_security_policy" : "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "content_security_policy" : "script-src 'self' https://ssl.google-analytics.com; script-src 'self' 'unsafe-eval'; object-src 'self'",
   "manifest_version": 2
 }

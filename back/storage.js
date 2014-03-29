@@ -26,6 +26,9 @@ function cleanStorage(all){
 		removeItems(remove);
 	}
 
+	var total = countRecords(all);
+	_gaq.push(['_trackEvent', 'storage', 'cleanStorage', 'total', total]);
+
 	//we clean the storage every 1 hour so it does not exceed 500 items
 	//I don't see the benefits of using chrome.alarms api so I leave this as is
 	cleanStorageTimer = setTimeout(cleanStorage, 3.6e+6);
@@ -94,14 +97,11 @@ function syncStorage(){
 //returns an array of url keys that should be removed from storage
 //@all is the entire object returned by storage
 function toClean(all){
-	var total = 0, remove = [];
-
-	for(var url in all){
-		total++;
-	}
+	var total = countRecords(all), remove = [];
 	
 	//storage capacity can't exceed 512 items
 	if(total > 500){
+		_gaq.push(['_trackEvent', 'storage', 'toClean', 'overflow', total]);
 		//first we remove any entry where the extension is disabled
 		remove = removeDisabled(all);
 		
@@ -114,6 +114,16 @@ function toClean(all){
 	}
 
 	return remove;
+}
+
+function countRecords(all){
+	var total = 0;
+
+	for(var url in all){
+		total++;
+	}
+
+	return total;
 }
 
 //returns an array of url keys where the extension is inactive
@@ -169,6 +179,7 @@ function removeItems(keysArray){
 	chrome.storage.sync.remove(keysArray, function(){
 		if(chrome.runtime.lastError){
 			console.log('error in removeItems');
+			_gaq.push(['_trackEvent', 'errors', 'removeItems', chrome.runtime.lastError.message]);
 			console.error(chrome.runtime.lastError);
 		}
 		
