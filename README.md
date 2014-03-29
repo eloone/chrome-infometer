@@ -44,7 +44,7 @@ It will ease your online reading experience as you will read faster and with mor
 
 ##Privacy
 
-* This extension saves the visited urls where the extension was activated in a local database that is synced with Chrome Sync across devices. So all the safety guidelines of Chrome Sync apply to this extension, see [https://support.google.com/chrome/answer/1181035?hl=en]. The data stored is only visible to the Chrome user.
+* This extension saves the visited urls where the extension was activated in a local database that is synced with Chrome Sync across devices. So all the safety guidelines of Chrome Sync apply to this extension, see https://support.google.com/chrome/answer/1181035?hl=en. The data stored is only visible to the Chrome user.
 
 * This extension logs these events into Google Analytics to measure usage and log errors :
    * when icon is clicked
