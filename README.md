@@ -42,6 +42,15 @@ It will ease your online reading experience as you will read faster and with mor
 * `front` contains the content scripts injected in the client page.
 * `back` contains the background scripts used by the extension to store, activate, and react on user input. 
 
+##Privacy
+
+* This extension saves the visited urls where the extension was activated in a local database that is synced with Chrome Sync across devices. So all the safety guidelines of Chrome Sync apply to this extension, see [https://support.google.com/chrome/answer/1181035?hl=en]. The data stored is only visible to the Chrome user.
+
+* This extension logs these events into Google Analytics to measure usage and log errors :
+   * when icon is clicked
+   * when an error occurs (storage, timeout)
+   * total number of records
+
 ##Next versions
 
 * Automatically detect "real" content
