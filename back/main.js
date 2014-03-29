@@ -19,11 +19,12 @@ chrome.runtime.onInstalled.addListener(function(info){
 	updateIcon();
 });
 
-//called when the extension is enabled
+//called when the extension is enabled and at chrome updates
 chrome.management.onEnabled.addListener(function(info){
 	//enabling/disabling the extension doesn't reload the runtime which causes port disconnections
 	//so we force runtime reload when enabling the extension it triggers the onInstalled hook
-	chrome.runtime.reload();
+	//for now off because it does not behave ok when published
+	//chrome.runtime.reload();
 });
 
 //called when the client connects to the extension
