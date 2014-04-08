@@ -13,6 +13,23 @@
 	left:0;
 }
 
+.chrome-extension-infometer-header-clickZone{
+	display: block;
+	top:0;
+	width:250px;
+	position: absolute;
+	cursor: pointer;
+	height:18px;
+}
+
+.chrome-extension-infometer-header-left{
+	left:0;
+}
+
+.chrome-extension-infometer-header-right{
+	right:0;
+}
+
 .chrome-extension-infometer-progress{
 	background: rgb(42, 158, 153);
 	box-shadow: inset 0 0 8px 3px rgb(49, 197, 197);	

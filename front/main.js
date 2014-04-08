@@ -170,7 +170,8 @@ Extension.prototype = {
 		
 		EventProxy.listen('markerClicked', function(){self.onMarkerClicked()});
 
-		EventProxy.listen('headerClicked', function(){self.onHeaderClicked()});
+		EventProxy.listen('headerClicked', function(e){self.onHeaderClicked(e)});
+
 	},
 	
 	detachEvents : function(){
@@ -186,7 +187,8 @@ Extension.prototype = {
 		
 		EventProxy.unlisten('markerClicked',  function(){self.onMarkerClicked()});
 
-		EventProxy.unlisten('headerClicked',  function(){self.onHeaderClicked()});
+		EventProxy.unlisten('headerClicked',  function(e){self.onHeaderClicked(e)});
+
 	},
 	
 	calculateProgress : function(){
@@ -228,10 +230,17 @@ Extension.prototype = {
 		this.m2.updatePosition(e.pageY);
 	},
 
-	onHeaderClicked : function(){
+	onHeaderClicked : function(e){
 		var m1Top = this.m1.top() - this.m1.fixedHeight()/2;
+		var m2Top = this.m2.top();
 
-		window.scrollTo(0, m1Top);
+		if(e.data.target == this.header.left){
+			window.scrollTo(0, m1Top);
+		}
+
+		if(e.data.target == this.header.right){
+			window.scrollTo(0, m2Top);
+		}
 	},
 	
 	onMarkerMoved : function(e){
@@ -278,22 +287,38 @@ Extension.prototype = {
 //header constructor = progress bar + tooltip
 function Header(){
 	var progress = document.createElement('span'),
+		left = document.createElement('span'),
+		right = document.createElement('span'),
 		header = document.createElement('div'),
 		tooltip = document.createElement('p'),
 		eventHeaderClicked = new ExtensionEvent('headerClicked'),
-		infometerImg = chrome.extension.getURL('images/infometer.png');
+		eventHeaderOver = new ExtensionEvent('headerOver'),
+		infometerImg = chrome.extension.getURL('images/infometer.png'),
+		docFrag = document.createDocumentFragment();
 	
 	progress.className = 'chrome-extension-infometer-progress';
 	header.className = 'chrome-extension-infometer chrome-extension-infometer-header';
 	tooltip.className = 'chrome-extension-infometer-tooltip';
+	left.className = 'chrome-extension-infometer-header-left chrome-extension-infometer-header-clickZone';
+	right.className = 'chrome-extension-infometer-header-right chrome-extension-infometer-header-clickZone';
 	
+	left.title = "Click to reach top marker";
+	right.title = "Click to reach bottom marker";
+
 	header.style.background = '#ddd url("'+infometerImg+'") no-repeat right center';
 	
 	tooltip.innerHTML = 'Please click on the end position you wish for this marker.';
-	header.appendChild(progress);
+
+	docFrag.appendChild(progress);
+	docFrag.appendChild(left);
+	docFrag.appendChild(right);
+
+	header.appendChild(docFrag);
 	
 	this.node = header;
 	this.progressBar = progress;
+	this.left = left;
+	this.right = right;
 	
 	this.addTooltip = function(){
 		if(tooltip.parentNode === null){
@@ -308,10 +333,16 @@ function Header(){
 	};
 
 	this.node.addEventListener('click', function(e){
+		eventHeaderClicked.data.pageX = e.pageX;
+		eventHeaderClicked.data.pageY = e.pageY;
+		eventHeaderClicked.data.target = e.target;
 		EventProxy.emit(eventHeaderClicked);
 	});
 	
-	document.body.className += ' chrome-extension-infometer-body';
+	if(document.body.className.indexOf('chrome-extension-infometer-body') == -1){
+		document.body.className += ' chrome-extension-infometer-body';
+	}
+
 	document.body.insertBefore(header, document.body.firstChild);
 }
 
@@ -375,6 +406,8 @@ function Marker(classes){
 	});
 	
 	this.node.src = this.src;
+
+	this.node.title = "Click to position marker";
 	
 	document.body.appendChild(this.node);
 }
