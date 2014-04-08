@@ -121,20 +121,24 @@ Extension.prototype = {
 
 		this.attachEvents();
 
+		var scrollTop = window.scrollY;
+		var m1Top = scrollTop + 60;
+		var m2Top = m1Top + 200;
+
 		//m1Top == null when the icon has never been clicked -> the extension has never been activated
 		if(this.settings.m1Top !== null){
 			//if it's not the first time we positioned the marker with the positions in the settings
 			this.m1.moveTo(this.settings.m1Top);
 		}else{
 			//if it's the first time the icon is clicked by default the first marker is positioned here
-			this.m1.moveTo(60);
+			this.m1.moveTo(m1Top, 'init');
 		}
 
 		//idem for m2Top
 		if(this.settings.m2Top !== null){			
 			this.m2.moveTo(this.settings.m2Top);
 		}else{
-			this.m2.moveTo(200);
+			this.m2.moveTo(m2Top, 'init');
 		}
 		
 		this.calculateProgress();		
@@ -144,7 +148,7 @@ Extension.prototype = {
 
 		this.cleanDom();
 		
-		document.body.className = document.body.className.replace(/chrome-extension-infometer-body/g, '');
+		document.body.className = document.body.className.replace(/\s*chrome-extension-infometer-body\s*/g, ' ');
 		
 		this.detachEvents();
 
@@ -162,7 +166,7 @@ Extension.prototype = {
 	
 		EventProxy.listen('overlayClicked', function(e){self.onOverlayClicked(e)});
 		
-		EventProxy.listen('markerMovedAway', function(){self.onMarkerMoved()});
+		EventProxy.listen('markerMovedAway', function(e){self.onMarkerMoved(e)});
 		
 		EventProxy.listen('markerClicked', function(){self.onMarkerClicked()});
 
@@ -178,7 +182,7 @@ Extension.prototype = {
 	
 		EventProxy.unlisten('overlayClicked', function(e){self.onOverlayClicked(e)});
 		
-		EventProxy.unlisten('markerMovedAway', function(){self.onMarkerMoved()});
+		EventProxy.unlisten('markerMovedAway', function(e){self.onMarkerMoved(e)});
 		
 		EventProxy.unlisten('markerClicked',  function(){self.onMarkerClicked()});
 
@@ -230,7 +234,7 @@ Extension.prototype = {
 		window.scrollTo(0, m1Top);
 	},
 	
-	onMarkerMoved : function(){
+	onMarkerMoved : function(e){
 		var save = {}, self = this;
 
 		this.header.removeTooltip();
@@ -241,17 +245,22 @@ Extension.prototype = {
 			this.m1 = tmp;
 		}
 
-		this.settings.m1Top = this.m1.positioned == 'final' ? this.m1.top() : this.settings.m1Top;
-		this.settings.m2Top = this.m2.positioned == 'final' ? this.m2.top() : this.settings.m2Top;
+		//if the user actually moved the marker manually (the marker position was not just initialized)
+		//we register the markers positions in the db
+		if(!e.data.init){
+
+			this.settings.m1Top = this.m1.positioned == 'final' ? this.m1.top() : this.settings.m1Top;
+			this.settings.m2Top = this.m2.positioned == 'final' ? this.m2.top() : this.settings.m2Top;
 		
-		if(this.m1.positioned == 'final' && this.m2.positioned == 'final'){
-			this.port.postMessage({
-				method : 'updateSettings',
-				data : {
-					m1Top : self.settings.m1Top,
-					m2Top : self.settings.m2Top
-				}
-			});
+			if(this.m1.positioned == 'final' && this.m2.positioned == 'final'){
+				this.port.postMessage({
+					method : 'updateSettings',
+					data : {
+						m1Top : self.settings.m1Top,
+						m2Top : self.settings.m2Top
+					}
+				});
+			}
 		}
 		
 		this.heightToView = this.getHeightToView();
@@ -322,8 +331,8 @@ function Overlay(){
 
 	function onClick(e){
 		eventOverlayClicked.pageY = e.pageY;
-		tmpOverlay.style.cursor = 'default';
 
+		tmpOverlay.style.setProperty("cursor", 'default', "important");
 		EventProxy.emit(eventOverlayClicked);
 
 		tmpOverlay.removeEventListener('click', onClick);
@@ -393,12 +402,18 @@ Marker.prototype = {
 	
 	positioned : 'pending',
 	
-	moveTo : function(y){	
+	moveTo : function(y, init){
 
 		this.node.style.left = 0 + 'px';
 		this.node.style.top = y + 'px';
 		
 		this.positioned = 'final';
+
+		if(init == 'init'){
+			this.eventMoved.data.init = true;
+		}else{
+			this.eventMoved.data.init = false;
+		}
 		
 		EventProxy.emit(this.eventMoved);
 	},
