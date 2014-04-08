@@ -333,8 +333,6 @@ function Header(){
 	};
 
 	this.node.addEventListener('click', function(e){
-		eventHeaderClicked.data.pageX = e.pageX;
-		eventHeaderClicked.data.pageY = e.pageY;
 		eventHeaderClicked.data.target = e.target;
 		EventProxy.emit(eventHeaderClicked);
 	});
