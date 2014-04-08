@@ -79,9 +79,7 @@ function syncStorage(){
 						storageSynced = true;
 					}else{
 						storageSynced = false;
-					}
-					
-					console.log('sync storage synced');						
+					}					
 				});
 			}
 		}
@@ -182,8 +180,6 @@ function removeItems(keysArray){
 			_gaq.push(['_trackEvent', 'errors', 'removeItems', chrome.runtime.lastError.message]);
 			console.error(chrome.runtime.lastError);
 		}
-		
-		console.log('removed items');
 	});
 }
 
