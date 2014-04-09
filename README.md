@@ -5,6 +5,10 @@
 
 ![Alt text](https://raw.githubusercontent.com/eloone/chrome-infometer/master/images/screenshot1.png)
 
+##Grab it 
+
+https://chrome.google.com/webstore/detail/infometer/aecmbngpoblfijikbmeeehekhmelghgi
+
 ##Pitch
 
 When you read lengthy in depth and very interesting articles online, haven't you ever been annoyed that it is caught between totally useless content like ads and comments? You start reading and it seems that the page never ends. Instead of focusing on reading, you keep wondering, "Man, how much left is there to read? I don't have the time to read a novel right now!" So you find yourself peeking at the scrollbar on the right, but it is so tiny, it looks like the page is very very long. Oh no.
