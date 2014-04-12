@@ -64,3 +64,6 @@ It will ease your online reading experience as you will read faster and with mor
 
 Graphic design is not my thing. However I love great design. If you are yourself a design queen or king and you want to see your design up there in the extension, you can ! Just work in the `prototype` folder of this repository with the `main.css` and `index.html` files and I will add your design as soon as the theme feature is ready. 
 
+##Rationale
+
+http://machinesaredigging.com/2014/04/12/the-infometer-concept-making-information-measurable/
