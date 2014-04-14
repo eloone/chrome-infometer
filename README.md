@@ -41,6 +41,8 @@ It will ease your online reading experience as you will read faster and with mor
     * OFF (red) : some pages are not typical web pages like the chrome:// pages or the chrome webstore pages that forbid any interaction with extensions. On those pages Infometer can't work.
     * ERR : sometimes if a tab has been opened for too long, you have to reload it to activate the extension again.
 
+Compared to other readability extensions it does not clean the original content so the content remains the same and you can keep navigating normally on the page. It is an "on the go" measurement tool that exists to help you take a grip on the existing content.
+
 ##Architecture
 
 * `front` contains the content scripts injected in the client page.
