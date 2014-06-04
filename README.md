@@ -64,7 +64,7 @@ Compared to other readability extensions it does not clean the original content 
 
 ##Graphic design friends
 
-Graphic design is not my thing. However I love great design. If you are yourself a design queen or king and you want to see your design up there in the extension, you can ! Just work in the `prototype` folder of this repository with the `main.css` and `index.html` files and I will add your design as soon as the theme feature is ready. 
+If design is your thing and you want to see your design up there in the extension, you can ! Just work in the `prototype` folder of this repository with the `main.css` and `index.html` files and I will add your design as soon as the theme feature is ready. 
 
 ##Rationale
 
