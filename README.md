@@ -1,15 +1,15 @@
-#INFOMETER
+# INFOMETER
 
 * Chrome extension that helps you measure how much of a web page you have read.
 * This extension provides a progress bar at the top of a web page and two markers to delimit the content area that you want to read when you click on its icon.
 
 ![Alt text](https://raw.githubusercontent.com/eloone/chrome-infometer/master/images/screenshot1.png)
 
-##Grab it 
+## Grab it 
 
 https://chrome.google.com/webstore/detail/infometer/aecmbngpoblfijikbmeeehekhmelghgi
 
-##Pitch
+## Pitch
 
 When you read lengthy in depth and very interesting articles online, haven't you ever been annoyed that it is caught between totally useless content like ads and comments? You start reading and it seems that the page never ends. Instead of focusing on reading, you keep wondering, "Man, how much left is there to read? I don't have the time to read a novel right now!" So you find yourself peeking at the scrollbar on the right, but it is so tiny, it looks like the page is very very long. Oh no.
 
@@ -21,7 +21,7 @@ That's when Infometer comes to the rescue. Infometer acts as an information meas
 
 ![Alt text](https://raw.githubusercontent.com/eloone/chrome-infometer/master/images/screenshot5.png)
 
-##Usage
+## Usage
 
 Next time you read seemingly lengthy content :
  1. First evaluate how much there is really to read
@@ -31,7 +31,7 @@ Next time you read seemingly lengthy content :
 
 It will ease your online reading experience as you will read faster and with more focus once you know how much exactly you need to read in a web page.
 
-##Features
+## Features
 
 * Synces with Chrome Sync.
 * If Chrome Sync is not active it will remember the position of your markers only on the current computer.
@@ -43,12 +43,12 @@ It will ease your online reading experience as you will read faster and with mor
 
 Compared to other readability extensions it does not clean the original content so the content remains the same and you can keep navigating normally on the page. It is an "on the go" measurement tool that exists to help you take a grip on the existing content.
 
-##Architecture
+## Architecture
 
 * `front` contains the content scripts injected in the client page.
 * `back` contains the background scripts used by the extension to store, activate, and react on user input. 
 
-##Privacy
+## Privacy
 
 * This extension saves the visited urls where the extension was activated in a local database that is synced with Chrome Sync across devices. So all the safety guidelines of Chrome Sync apply to this extension, see https://support.google.com/chrome/answer/1181035?hl=en. The data stored is only visible to the Chrome user.
 
@@ -57,15 +57,15 @@ Compared to other readability extensions it does not clean the original content 
    * when an error occurs (storage, timeout)
    * total number of records
 
-##Next versions
+## Next versions
 
 * Automatically detect "real" content
 * Implement themes
 
-##Graphic design friends
+## Graphic design friends
 
 If design is your thing and you want to see your design up there in the extension, you can ! Just work in the `prototype` folder of this repository with the `main.css` and `index.html` files and I will add your design as soon as the theme feature is ready. 
 
-##Rationale
+## Rationale
 
 http://machinesaredigging.com/2014/04/12/the-infometer-concept-making-information-measurable/
